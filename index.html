@@ -1,0 +1,2878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cosmos Cabinets — Order Manager</title>
+<style>
+/* ── Reset & Base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f1f5f9; color: #1e293b; min-height: 100vh; }
+
+/* ── Typography ── */
+h1 { font-size: 1.5rem; font-weight: 700; }
+h2 { font-size: 1.15rem; font-weight: 600; }
+h3 { font-size: 1rem; font-weight: 600; }
+p  { line-height: 1.5; }
+
+/* ── Utilities ── */
+.hidden { display: none !important; }
+.flex   { display: flex; }
+.gap-2  { gap: 0.5rem; }
+.gap-3  { gap: 0.75rem; }
+.gap-4  { gap: 1rem; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.text-sm  { font-size: 0.85rem; }
+.text-xs  { font-size: 0.75rem; }
+.text-muted { color: #64748b; }
+.font-mono  { font-family: 'SF Mono', 'Fira Code', monospace; }
+.w-full { width: 100%; }
+
+/* ── Nav ── */
+.topnav {
+  background: #0f2540;
+  color: #fff;
+  padding: 0 1.5rem;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,.35);
+}
+.topnav .brand { display: flex; align-items: center; gap: 0.6rem; font-weight: 700; font-size: 1rem; letter-spacing: .02em; }
+.topnav .brand .logo-sq {
+  width: 32px; height: 32px; background: #2563eb; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 900;
+}
+.topnav nav a {
+  color: #94a3b8; text-decoration: none; font-size: .85rem; padding: 0.3rem 0.6rem;
+  border-radius: 4px; transition: color .15s, background .15s;
+}
+.topnav nav a:hover, .topnav nav a.active { color: #fff; background: rgba(255,255,255,.1); }
+.topnav .user-chip { display: flex; align-items: center; gap: .5rem; font-size: .8rem; color: #94a3b8; }
+.avatar { width: 28px; height: 28px; background: #2563eb; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .7rem; color: #fff; font-weight: 700; }
+
+/* ── Page Shell ── */
+.page { max-width: 1280px; margin: 0 auto; padding: 1.5rem; }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .45rem .9rem; border-radius: 6px; border: none; cursor: pointer;
+  font-size: .85rem; font-weight: 500; transition: background .15s, box-shadow .15s;
+  line-height: 1;
+}
+.btn-primary { background: #2563eb; color: #fff; }
+.btn-primary:hover { background: #1d4ed8; }
+.btn-secondary { background: #fff; color: #374151; border: 1px solid #d1d5db; }
+.btn-secondary:hover { background: #f9fafb; }
+.btn-ghost { background: transparent; color: #64748b; border: 1px solid transparent; }
+.btn-ghost:hover { background: #f1f5f9; color: #1e293b; }
+.btn-danger { background: #dc2626; color: #fff; }
+.btn-danger:hover { background: #b91c1c; }
+.btn-sm { padding: .3rem .6rem; font-size: .78rem; }
+.btn-icon { padding: .4rem; border-radius: 6px; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ── Cards ── */
+.card { background: #fff; border-radius: 10px; border: 1px solid #e2e8f0; }
+.card-header { padding: 1rem 1.25rem; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
+.card-body { padding: 1.25rem; }
+
+/* ── Form Elements ── */
+.form-group { display: flex; flex-direction: column; gap: .35rem; }
+.form-label { font-size: .82rem; font-weight: 500; color: #374151; }
+.form-label .req { color: #ef4444; margin-left: 2px; }
+.form-control {
+  padding: .5rem .7rem; border: 1px solid #d1d5db; border-radius: 6px;
+  font-size: .875rem; color: #1e293b; background: #fff;
+  transition: border-color .15s, box-shadow .15s;
+  width: 100%;
+}
+.form-control:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+.form-control:disabled { background: #f9fafb; color: #9ca3af; }
+select.form-control { cursor: pointer; }
+.form-hint { font-size: .75rem; color: #64748b; }
+.form-error { font-size: .75rem; color: #ef4444; display: none; }
+.form-group.has-error .form-control { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,.1); }
+.form-group.has-error .form-error { display: block; }
+.form-group.has-error .form-label { color: #ef4444; }
+.form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+
+/* ── Badges / Status ── */
+.badge {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .2rem .55rem; border-radius: 999px; font-size: .72rem; font-weight: 600; letter-spacing: .02em;
+}
+.badge-blue   { background: #dbeafe; color: #1d4ed8; }
+.badge-green  { background: #dcfce7; color: #15803d; }
+.badge-amber  { background: #fef3c7; color: #92400e; }
+.badge-red    { background: #fee2e2; color: #b91c1c; }
+.badge-slate  { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+.badge-purple { background: #ede9fe; color: #6d28d9; }
+
+/* ── Table ── */
+.table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid #e2e8f0; }
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  background: #f8fafc; padding: .6rem 1rem; text-align: left;
+  font-size: .75rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .05em;
+  border-bottom: 1px solid #e2e8f0; white-space: nowrap;
+}
+tbody tr { border-bottom: 1px solid #f1f5f9; transition: background .1s; cursor: pointer; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: #f8fafc; }
+tbody td { padding: .7rem 1rem; font-size: .875rem; }
+.td-mono { font-family: monospace; font-size: .8rem; color: #475569; }
+
+/* ── Search Bar ── */
+.search-bar {
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+  padding: 1rem 1.25rem; display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+.search-bar .form-group { min-width: 160px; flex: 1; }
+
+/* ── Progress Steps (Wizard) ── */
+.wizard-steps {
+  display: flex; align-items: center; gap: 0; margin-bottom: 2rem;
+}
+.wizard-step { display: flex; align-items: center; gap: 0; flex: 1; }
+.step-dot {
+  width: 30px; height: 30px; border-radius: 50%; border: 2px solid #d1d5db;
+  display: flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 700;
+  background: #fff; color: #9ca3af; flex-shrink: 0; transition: all .2s;
+}
+.step-dot.active { border-color: #2563eb; background: #2563eb; color: #fff; }
+.step-dot.done   { border-color: #16a34a; background: #16a34a; color: #fff; }
+.step-label { font-size: .72rem; color: #9ca3af; margin-top: .3rem; white-space: nowrap; }
+.step-label.active { color: #2563eb; font-weight: 600; }
+.step-label.done   { color: #16a34a; }
+.step-connector { flex: 1; height: 2px; background: #e2e8f0; margin: 0 4px; margin-bottom: 18px; }
+.step-connector.done { background: #16a34a; }
+.step-wrap { display: flex; flex-direction: column; align-items: center; }
+
+/* ── Modal ── */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(15,37,64,.55);
+  display: flex; align-items: center; justify-content: center; z-index: 200;
+  backdrop-filter: blur(2px);
+}
+.modal {
+  background: #fff; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.25);
+  width: 100%; max-height: 90vh; overflow-y: auto;
+  animation: modalIn .18s ease;
+}
+.modal-sm  { max-width: 460px; }
+.modal-md  { max-width: 600px; }
+.modal-lg  { max-width: 780px; }
+@keyframes modalIn { from { opacity: 0; transform: translateY(-12px) scale(.97); } to { opacity: 1; transform: none; } }
+.modal-header { padding: 1.1rem 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
+.modal-body   { padding: 1.5rem; }
+.modal-footer { padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: .6rem; }
+.close-btn { background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 1.2rem; line-height: 1; padding: .2rem; }
+.close-btn:hover { color: #374151; }
+
+/* ── Project Detail Layout ── */
+.detail-layout { display: grid; grid-template-columns: 1fr 260px; gap: 1.25rem; align-items: start; }
+
+/* ── Tabs ── */
+.tab-bar { display: flex; gap: 0; border-bottom: 2px solid #e2e8f0; margin-bottom: 1.25rem; }
+.tab-btn {
+  padding: .6rem 1rem; font-size: .85rem; font-weight: 500; color: #64748b;
+  background: none; border: none; border-bottom: 2px solid transparent;
+  cursor: pointer; margin-bottom: -2px; display: flex; align-items: center; gap: .35rem;
+  transition: color .15s;
+}
+.tab-btn:hover:not(.locked) { color: #1e293b; }
+.tab-btn.active { color: #2563eb; border-bottom-color: #2563eb; }
+.tab-btn.locked { color: #cbd5e1; cursor: not-allowed; }
+.tab-btn .lock-icon { font-size: .7rem; }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* ── Checklist Sidebar ── */
+.checklist-card { position: sticky; top: 64px; }
+.checklist-item { display: flex; align-items: flex-start; gap: .6rem; padding: .5rem 0; border-bottom: 1px solid #f1f5f9; }
+.checklist-item:last-child { border-bottom: none; }
+.check-icon { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .65rem; flex-shrink: 0; margin-top: 1px; }
+.check-icon.done    { background: #dcfce7; color: #16a34a; }
+.check-icon.pending { background: #f1f5f9; color: #cbd5e1; border: 1px solid #e2e8f0; }
+.check-icon.current { background: #dbeafe; color: #2563eb; }
+.checklist-item .check-text { font-size: .8rem; }
+.checklist-item .check-text strong { display: block; font-weight: 500; color: #1e293b; }
+.checklist-item .check-text span  { color: #94a3b8; font-size: .72rem; }
+
+/* ── Info Card on Project Detail ── */
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.info-item .label { font-size: .72rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .25rem; }
+.info-item .value { font-size: .9rem; color: #1e293b; }
+.info-item .value.empty { color: #cbd5e1; font-style: italic; }
+
+/* ── Empty State ── */
+.empty-state { text-align: center; padding: 3rem 1.5rem; color: #94a3b8; }
+.empty-state .empty-icon { font-size: 2.5rem; margin-bottom: .75rem; }
+.empty-state h3 { color: #475569; margin-bottom: .4rem; }
+.empty-state p { font-size: .85rem; max-width: 300px; margin: 0 auto 1.25rem; }
+
+/* ── Alert ── */
+.alert { padding: .75rem 1rem; border-radius: 7px; font-size: .84rem; display: flex; gap: .6rem; align-items: flex-start; }
+.alert-info    { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.alert-warning { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+.alert-success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.alert-danger  { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+.btn-generate  { background: #7c3aed; color: #fff; }
+.btn-generate:hover { background: #6d28d9; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner { display: inline-block; border: 2px solid rgba(109,40,217,.2); border-top-color: #7c3aed; border-radius: 50%; width: 16px; height: 16px; animation: spin .7s linear infinite; }
+
+/* ── Scheme Card ── */
+.scheme-card {
+  border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem;
+  display: flex; justify-content: space-between; align-items: center;
+  transition: border-color .15s;
+}
+.scheme-card:hover { border-color: #93c5fd; }
+.scheme-detail { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; margin-top: .6rem; }
+.scheme-detail-item .dl { font-size: .7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: .04em; }
+.scheme-detail-item .dv { font-size: .82rem; color: #374151; font-weight: 500; }
+
+/* ── Dual Listbox ── */
+.dual-listbox { display: grid; grid-template-columns: 1fr auto 1fr; gap: .75rem; align-items: center; }
+.listbox { border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; min-height: 140px; }
+.listbox-header { background: #f8fafc; padding: .4rem .75rem; font-size: .72rem; font-weight: 600; color: #64748b; border-bottom: 1px solid #e2e8f0; text-transform: uppercase; letter-spacing: .04em; }
+.listbox-body { max-height: 160px; overflow-y: auto; }
+.listbox-item { padding: .45rem .75rem; font-size: .82rem; cursor: pointer; border-bottom: 1px solid #f1f5f9; }
+.listbox-item:last-child { border-bottom: none; }
+.listbox-item:hover { background: #eff6ff; }
+.listbox-item.selected { background: #dbeafe; color: #1d4ed8; font-weight: 500; }
+.listbox-arrows { display: flex; flex-direction: column; gap: .4rem; align-items: center; }
+.arrow-btn { padding: .3rem .5rem; background: #f1f5f9; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer; font-size: .8rem; }
+.arrow-btn:hover { background: #e2e8f0; }
+
+/* ── Progress Bar ── */
+.progress-bar { background: #e2e8f0; border-radius: 999px; height: 8px; overflow: hidden; }
+.progress-fill { height: 100%; background: #2563eb; border-radius: 999px; transition: width .3s; }
+
+/* ── Breadcrumb ── */
+.breadcrumb { display: flex; align-items: center; gap: .4rem; font-size: .8rem; color: #94a3b8; margin-bottom: 1rem; }
+.breadcrumb a { color: #2563eb; text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
+.breadcrumb span { color: #d1d5db; }
+
+/* ── Divider ── */
+.divider { border: none; border-top: 1px solid #e2e8f0; margin: 1.25rem 0; }
+
+/* ── Tooltip ── */
+[data-tip] { position: relative; cursor: help; }
+[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+  background: #1e293b; color: #fff; font-size: .72rem; padding: .3rem .6rem; border-radius: 4px;
+  white-space: nowrap; pointer-events: none; z-index: 999; margin-bottom: 4px;
+}
+
+/* ── Tag input simulation ── */
+.tag-row { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .4rem; }
+.tag { display: inline-flex; align-items: center; gap: .25rem; padding: .2rem .5rem; background: #dbeafe; color: #1d4ed8; border-radius: 999px; font-size: .75rem; font-weight: 500; }
+
+/* ── Unit status pipeline badges ── */
+.badge-orange { background: #ffedd5; color: #c2410c; }
+.badge-sky    { background: #e0f2fe; color: #0369a1; }
+.badge-teal   { background: #ccfbf1; color: #0f766e; }
+.badge-indigo { background: #e0e7ff; color: #4338ca; }
+
+/* ── Clickable checklist ── */
+.checklist-item.actionable { cursor: pointer; border-radius: 6px; margin: 0 -.5rem; padding: .5rem .5rem; transition: background .13s; }
+.checklist-item.actionable:hover { background: #eff6ff; }
+.checklist-item.actionable:hover .check-text strong { color: #2563eb; }
+
+/* ── Unit filter bar ── */
+.unit-filter-bar { display:flex; gap:.75rem; align-items:flex-end; flex-wrap:wrap; margin-bottom:1rem; }
+.unit-filter-bar .form-group { min-width:130px; flex:1; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+/* ── Wizard Step Transitions ── */
+.wizard-step-pane {
+  animation: stepFadeIn .28s ease-out;
+}
+@keyframes stepFadeIn {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.wizard-step-pane.slide-back {
+  animation: stepFadeInBack .28s ease-out;
+}
+@keyframes stepFadeInBack {
+  from { opacity: 0; transform: translateX(-16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Wizard Progress Bar ── */
+.wizard-progress-bar-wrap {
+  margin: -0.5rem 0 1.5rem;
+  padding: 0 0.5rem;
+}
+.wizard-progress-bar {
+  background: #e2e8f0;
+  border-radius: 999px;
+  height: 4px;
+  overflow: hidden;
+}
+.wizard-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2563eb, #7c3aed);
+  border-radius: 999px;
+  transition: width .35s cubic-bezier(.4,0,.2,1);
+}
+
+/* ── Clickable Step Dots ── */
+.step-dot.clickable { cursor: pointer; transition: all .15s; }
+.step-dot.clickable:hover { transform: scale(1.15); box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+
+/* ── Character Counter ── */
+.char-counter {
+  font-size: .72rem;
+  color: #94a3b8;
+  text-align: right;
+  margin-top: .2rem;
+  transition: color .15s;
+}
+.char-counter.warn { color: #f59e0b; }
+.char-counter.over { color: #ef4444; font-weight: 600; }
+
+/* ── Success Toast ── */
+.toast-container {
+  position: fixed;
+  top: 68px;
+  right: 1.5rem;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  pointer-events: none;
+}
+.toast {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0,0,0,.12);
+  padding: .75rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  font-size: .88rem;
+  color: #1e293b;
+  animation: toastIn .3s ease, toastOut .3s ease 2.7s forwards;
+  pointer-events: auto;
+  max-width: 400px;
+}
+.toast-success { border-left: 4px solid #16a34a; }
+.toast-success .toast-icon { color: #16a34a; font-size: 1.1rem; }
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(40px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes toastOut {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(40px); }
+}
+
+/* ── Review Step Edit Links ── */
+.review-edit-link {
+  font-size: .72rem;
+  color: #2563eb;
+  cursor: pointer;
+  font-weight: 500;
+  text-decoration: none;
+  margin-left: .5rem;
+  transition: color .15s;
+}
+.review-edit-link:hover { color: #1d4ed8; text-decoration: underline; }
+
+/* ── P2: Step Summary Chips ── */
+.step-summary {
+  font-size: .62rem;
+  color: #16a34a;
+  max-width: 90px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: .15rem;
+  opacity: .85;
+}
+
+/* ── P2: Step Counter Subtitle ── */
+.wizard-step-counter {
+  font-size: .72rem;
+  color: #94a3b8;
+  font-weight: 400;
+  margin-left: .5rem;
+}
+
+/* ── P2: Skip Button ── */
+.btn-skip {
+  background: transparent;
+  color: #94a3b8;
+  border: 1px dashed #d1d5db;
+  font-size: .82rem;
+  padding: .4rem .8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.btn-skip:hover {
+  color: #64748b;
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
+/* ── P2: Toast Close Button ── */
+.toast-close {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: .9rem;
+  padding: .1rem .3rem;
+  line-height: 1;
+  margin-left: .4rem;
+  border-radius: 4px;
+  transition: all .12s;
+}
+.toast-close:hover { color: #374151; background: #f1f5f9; }
+
+/* ── P2: Responsive Wizard Steps ── */
+@media (max-width: 600px) {
+  .wizard-steps { gap: 0; }
+  .step-label { display: none; }
+  .step-summary { display: none; }
+  .step-dot { width: 26px; height: 26px; font-size: .65rem; }
+  .modal-body { padding: 1rem; }
+  .modal-header { padding: .9rem 1rem; }
+  .modal-footer { padding: .75rem 1rem; }
+  .form-grid-2 { grid-template-columns: 1fr; }
+}
+
+/* ── P2: Date Error ── */
+.date-error {
+  font-size: .75rem;
+  color: #ef4444;
+  margin-top: .25rem;
+  display: none;
+}
+.date-error.visible { display: block; }
+</style>
+</head>
+<body>
+
+<!-- Toast container -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ═══════════════════════════════════════════════
+     TOP NAV
+════════════════════════════════════════════════ -->
+<nav class="topnav">
+  <div class="brand">
+    <img src="data:image/png;base64,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" alt="Cosmos Cabinets" style="height:38px;border-radius:5px;background:#fff;padding:3px 8px;display:block" />
+    <span style="color:#64748b;font-weight:400;font-size:.78rem;margin-left:.5rem;letter-spacing:.03em">Order Manager</span>
+  </div>
+  <nav class="flex gap-2">
+    <a href="#" class="active" onclick="showPage('projects-list'); return false;">Projects</a>
+    <a href="#">Customers</a>
+    <a href="#">Catalog</a>
+    <a href="#">Reports</a>
+  </nav>
+  <div class="user-chip">
+    <div class="avatar">JG</div>
+    J. German
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════
+     PAGE: PROJECTS LIST
+════════════════════════════════════════════════ -->
+<div id="page-projects-list" class="page">
+  <div class="flex justify-between items-center" style="margin-bottom:1.25rem">
+    <div>
+      <h1>Projects</h1>
+      <p class="text-muted text-sm" style="margin-top:.2rem">Manage all cabinet project orders</p>
+    </div>
+    <button class="btn btn-primary" onclick="openWizard()">
+      <span>＋</span> New Project
+    </button>
+  </div>
+
+  <!-- Search bar — always visible results, no "click Search" ritual -->
+  <div class="search-bar">
+    <div class="form-group" style="flex:2">
+      <label class="form-label">Search</label>
+      <input class="form-control" type="text" placeholder="Project name, customer, PO number…" oninput="filterProjects()" id="search-input" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Customer</label>
+      <select class="form-control" onchange="filterProjects()" id="filter-customer">
+        <option value="">All Customers</option>
+        <option>Meridian Realty Group</option>
+        <option>Parkside Developers</option>
+        <option>Vantage Homes LLC</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Status</label>
+      <select class="form-control" onchange="filterProjects()" id="filter-status">
+        <option value="">All Statuses</option>
+        <option>Bid Request</option>
+        <option>In Progress</option>
+        <option>Released</option>
+        <option>Completed</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Date Range</label>
+      <input class="form-control" type="date" id="filter-date" onchange="filterProjects()" />
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="clearFilters()">Clear</button>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="text-sm font-600" id="projects-count">Showing 4 projects</span>
+      <div class="flex gap-2">
+        <button class="btn btn-ghost btn-sm">Export CSV</button>
+      </div>
+    </div>
+    <div class="table-wrap" style="border:none;border-radius:0 0 10px 10px">
+      <table id="projects-table">
+        <thead>
+          <tr>
+            <th>Project Name</th>
+            <th>Customer</th>
+            <th>Status</th>
+            <th>Start Date</th>
+            <th>End Date</th>
+            <th>Schemes</th>
+            <th>Units</th>
+            <th>Setup</th>
+          </tr>
+        </thead>
+        <tbody id="projects-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     PAGE: PROJECT DETAIL
+════════════════════════════════════════════════ -->
+<div id="page-project-detail" class="page hidden">
+  <div class="breadcrumb">
+    <a href="#" onclick="showPage('projects-list'); return false;">Projects</a>
+    <span>›</span>
+    <span id="detail-breadcrumb">Project Detail</span>
+  </div>
+
+  <div class="flex justify-between items-center" style="margin-bottom:1.25rem">
+    <div>
+      <div class="flex items-center gap-3">
+        <h1 id="detail-title">—</h1>
+        <span id="detail-status-badge" class="badge badge-blue">—</span>
+      </div>
+      <p class="text-muted text-sm" style="margin-top:.2rem" id="detail-subtitle">—</p>
+    </div>
+    <div class="flex gap-2">
+      <button class="btn btn-secondary btn-sm" onclick="openEditProject()">✏ Edit Project</button>
+      <button class="btn btn-ghost btn-sm">⋯ More</button>
+    </div>
+  </div>
+
+  <div class="detail-layout">
+    <!-- Main content -->
+    <div>
+      <!-- Tabs -->
+      <div class="tab-bar" id="tab-bar"></div>
+
+      <!-- Tab: Overview -->
+      <div id="tab-overview" class="tab-pane">
+        <div class="card" style="margin-bottom:1rem">
+          <div class="card-header">
+            <h3>Project Information</h3>
+          </div>
+          <div class="card-body">
+            <div class="info-grid" id="project-info-grid"></div>
+            <hr class="divider" />
+            <div class="form-grid-2">
+              <div>
+                <div class="text-xs text-muted" style="margin-bottom:.5rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Bill To</div>
+                <div id="bill-to-block" style="font-size:.85rem;line-height:1.6;color:#374151"></div>
+              </div>
+              <div>
+                <div class="text-xs text-muted" style="margin-bottom:.5rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Ship To</div>
+                <div id="ship-to-block" style="font-size:.85rem;line-height:1.6;color:#374151"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h3>Project Stats</h3></div>
+          <div class="card-body" id="project-stats-block"></div>
+        </div>
+      </div>
+
+      <!-- Tab: Schemes -->
+      <div id="tab-schemes" class="tab-pane">
+        <div class="flex justify-between items-center" style="margin-bottom:1rem">
+          <div>
+            <h3>Schemes</h3>
+            <p class="text-muted text-sm" style="margin-top:.2rem">A scheme defines the catalog, construction method, and finish style used for cabinet orders.</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openAddScheme()">＋ Add Scheme</button>
+        </div>
+        <div id="schemes-list"></div>
+      </div>
+
+      <!-- Tab: Layouts -->
+      <div id="tab-layouts" class="tab-pane">
+        <div class="flex justify-between items-center" style="margin-bottom:.75rem">
+          <div>
+            <h3>Layouts</h3>
+            <p class="text-muted text-sm" style="margin-top:.2rem">Room configuration templates. One layout can be shared by many units — create it once, assign it to as many apartments as needed.</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openAddLayout()">＋ New Layout</button>
+        </div>
+        <div class="alert alert-info" style="margin-bottom:1rem">
+          <span>💡</span>
+          <span><strong>Layouts are reusable templates.</strong> For example, create one "Standard 2BR Kitchen" layout and assign it to all 80 two-bedroom units. You don't need a separate layout per apartment.</span>
+        </div>
+        <div id="layouts-list"></div>
+      </div>
+
+      <!-- Tab: Units -->
+      <div id="tab-units" class="tab-pane">
+        <div class="flex justify-between items-center" style="margin-bottom:.75rem">
+          <div>
+            <h3>Units</h3>
+            <p class="text-muted text-sm" style="margin-top:.2rem">Individual apartments or rooms. Each unit is assigned a layout template and tracked through production to delivery.</p>
+          </div>
+          <div class="flex gap-2">
+            <button class="btn btn-generate btn-sm" onclick="openGenerateUnits()">✨ Generate with Cosmo</button>
+            <button class="btn btn-secondary btn-sm" onclick="openImportUnits()">↓ Bulk Import</button>
+            <button class="btn btn-primary btn-sm" onclick="openAddUnit()">＋ New Unit</button>
+          </div>
+        </div>
+        <div class="alert alert-info" style="margin-bottom:.75rem" id="units-info-banner"></div>
+        <!-- Filter bar -->
+        <div class="unit-filter-bar" id="unit-filter-bar" style="display:none">
+          <div class="form-group">
+            <label class="form-label">Search</label>
+            <input id="uf-search" class="form-control" type="text" placeholder="Building or unit #…" oninput="filterUnitsDisplay()" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Building</label>
+            <select id="uf-building" class="form-control" onchange="filterUnitsDisplay()">
+              <option value="">All Buildings</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select id="uf-status" class="form-control" onchange="filterUnitsDisplay()">
+              <option value="">All Statuses</option>
+              <option>Pending</option>
+              <option>In Production</option>
+              <option>Ready to Ship</option>
+              <option>Loaded</option>
+              <option>Delivered</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Layout</label>
+            <select id="uf-layout" class="form-control" onchange="filterUnitsDisplay()">
+              <option value="">All Layouts</option>
+            </select>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="clearUnitFilters()" style="align-self:flex-end">Clear</button>
+        </div>
+        <div id="units-list"></div>
+      </div>
+
+      <!-- Tab: Trucks -->
+      <div id="tab-trucks" class="tab-pane">
+        <div class="flex justify-between items-center" style="margin-bottom:1rem">
+          <div>
+            <h3>Trucks</h3>
+            <p class="text-muted text-sm" style="margin-top:.2rem">Assign units to delivery trucks and track load capacity.</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openAddTruck()">＋ New Truck</button>
+        </div>
+        <div id="trucks-list"></div>
+      </div>
+
+      <!-- Tab: Replacement Orders — hidden until orders are released, rendered dynamically -->
+    </div>
+
+    <!-- Sidebar: Setup checklist -->
+    <div class="checklist-card card">
+      <div class="card-header">
+        <h3 style="font-size:.88rem">Project Setup</h3>
+        <span class="badge badge-slate" id="setup-progress-label">0 / 6</span>
+      </div>
+      <div class="card-body" style="padding:.75rem 1rem">
+        <div id="setup-checklist"></div>
+        <hr class="divider" />
+        <div class="text-xs text-muted">Contacts</div>
+        <div style="margin-top:.5rem;font-size:.82rem;color:#94a3b8;font-style:italic">No contacts added</div>
+        <button class="btn btn-ghost btn-sm w-full" style="margin-top:.6rem;justify-content:center">＋ Add Contact</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     WIZARD: NEW PROJECT
+════════════════════════════════════════════════ -->
+<div id="wizard-modal" class="modal-backdrop hidden" onclick="if(event.target===this)closeWizard()">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div>
+        <div style="font-size:.75rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.2rem">New Project</div>
+        <h2 id="wizard-step-title">Basic Information</h2>
+      </div>
+      <button class="close-btn" onclick="closeWizard()">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Progress -->
+      <div class="wizard-steps" id="wizard-progress"></div>
+      <div class="wizard-progress-bar-wrap">
+        <div class="wizard-progress-bar">
+          <div class="wizard-progress-fill" id="wizard-progress-fill" style="width:20%"></div>
+        </div>
+      </div>
+
+      <!-- Step 1: Basic Info -->
+      <div id="wizard-step-1">
+        <div class="form-group" style="margin-bottom:1rem">
+          <label class="form-label">Project Name <span class="req">*</span></label>
+          <input id="w-name" class="form-control" type="text" placeholder="e.g. Meridian Tower — Phase 2" maxlength="80" oninput="clearFieldError(this); updateCharCounter()" />
+          <span class="form-error">Project name is required</span>
+          <div class="char-counter" id="w-name-counter">0 / 80</div>
+        </div>
+        <div class="form-group" style="margin-bottom:1rem">
+          <label class="form-label">Project Description</label>
+          <textarea id="w-desc" class="form-control" rows="3" placeholder="Optional notes about this project…" style="resize:vertical"></textarea>
+        </div>
+        <div class="form-grid-2" style="margin-bottom:1rem">
+          <div class="form-group">
+            <label class="form-label">Start Date <span class="req">*</span></label>
+            <input id="w-start" class="form-control" type="date" onchange="validateDates()" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">End Date <span class="req">*</span></label>
+            <input id="w-end" class="form-control" type="date" onchange="validateDates()" />
+            <div class="date-error" id="w-date-error">End date must be after start date</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Initial Status</label>
+          <select id="w-status" class="form-control">
+            <option>Bid Request</option>
+            <option>In Progress</option>
+            <option>On Hold</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Step 2: Customer -->
+      <div id="wizard-step-2" class="hidden">
+        <div class="alert alert-info" style="margin-bottom:1.25rem">
+          <span>ℹ</span>
+          <span>Every project must be linked to a customer. The customer record provides billing addresses, contacts, and pricing factor.</span>
+        </div>
+        <div class="form-group" style="margin-bottom:1rem">
+          <label class="form-label">Customer <span class="req">*</span></label>
+          <select id="w-customer" class="form-control" onchange="clearFieldError(this)">
+            <option value="">— Select customer —</option>
+            <option value="MRG">Meridian Realty Group (MRG)</option>
+            <option value="PSD">Parkside Developers (PSD)</option>
+            <option value="VHL">Vantage Homes LLC (VHL)</option>
+          </select>
+          <span class="form-error">Please select a customer</span>
+          <span class="form-hint">Can't find the customer? <a href="#" style="color:#2563eb">Add a new customer →</a></span>
+        </div>
+        <div id="customer-preview" class="hidden card" style="border-color:#bfdbfe;background:#eff6ff;padding:0">
+          <div class="card-body" style="padding:.9rem">
+            <div class="form-grid-2">
+              <div class="info-item">
+                <div class="label">Customer Code</div>
+                <div class="value font-mono" id="cp-code">—</div>
+              </div>
+              <div class="info-item">
+                <div class="label">Customer Name</div>
+                <div class="value" id="cp-name">—</div>
+              </div>
+              <div class="info-item">
+                <div class="label">Primary Contact</div>
+                <div class="value" id="cp-contact">—</div>
+              </div>
+              <div class="info-item">
+                <div class="label">Pricing Factor</div>
+                <div class="value" id="cp-factor">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Addresses -->
+      <div id="wizard-step-3" class="hidden">
+        <div class="alert alert-info" style="margin-bottom:1.25rem">
+          <span>ℹ</span>
+          <span>Addresses are pre-populated from the customer record. You can override them for this project.</span>
+        </div>
+        <div class="form-group" style="margin-bottom:1.25rem">
+          <label class="form-label">Billing Address <span class="req">*</span></label>
+          <select id="w-billing" class="form-control">
+            <option>123 Commerce Blvd, Suite 400, Atlanta, GA 30301</option>
+            <option>456 Business Park Dr, Atlanta, GA 30302</option>
+            <option>— Use a different address —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Shipping Address <span class="req">*</span></label>
+          <select id="w-shipping" class="form-control">
+            <option>1847 Meridian Tower Way, Atlanta, GA 30309</option>
+            <option>123 Commerce Blvd, Suite 400, Atlanta, GA 30301</option>
+            <option>— Use a different address —</option>
+          </select>
+        </div>
+        <div style="margin-top:.75rem">
+          <button class="btn btn-ghost btn-sm" onclick="return false;">＋ Add a new address</button>
+        </div>
+      </div>
+
+      <!-- Step 4: Initial Scheme (optional) -->
+      <div id="wizard-step-4" class="hidden">
+        <div class="alert alert-info" style="margin-bottom:1.25rem">
+          <span>ℹ</span>
+          <div>
+            <strong>What is a scheme?</strong>
+            A scheme links a product catalog to a set of construction and finish specifications. You'll need at least one before creating layouts.
+          </div>
+        </div>
+        <div style="margin-bottom:1.25rem;text-align:center">
+          <button class="btn-skip" onclick="skipSchemeStep()">Skip — I'll add schemes later</button>
+        </div>
+        <div class="form-group" style="margin-bottom:1rem">
+          <label class="form-label">Catalog</label>
+          <select id="w-catalog" class="form-control" onchange="updateSchemeName()">
+            <option value="">— Skip for now —</option>
+            <option value="COSMO_FF">Cosmo Face Frame Catalog 2 (COSMO_FF)</option>
+            <option value="COSMO_FL">Cosmo Frameless Catalog 2 (COSMO_FL)</option>
+          </select>
+          <span class="form-hint">Face Frame = traditional overlay construction · Frameless = European/full-access construction</span>
+        </div>
+        <div id="scheme-fields" class="hidden">
+          <div class="form-group" style="margin-bottom:1rem">
+            <label class="form-label">Scheme Name <span class="req">*</span></label>
+            <input id="w-scheme-name" class="form-control" type="text" placeholder="e.g. Phase 2 — Shaker White" />
+          </div>
+          <div class="form-grid-2" style="margin-bottom:1rem">
+            <div class="form-group">
+              <label class="form-label">Cabinet Box</label>
+              <select id="w-box" class="form-control">
+                <option>— Select —</option>
+                <option>Standard Plywood Box</option>
+                <option>Premium Plywood Box</option>
+                <option>MDF Core Box</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Drawer Options</label>
+              <select id="w-drawer" class="form-control">
+                <option>— Select —</option>
+                <option>Undermount Soft-Close</option>
+                <option>Side-Mount Standard</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label">Series</label>
+              <select id="w-series" class="form-control">
+                <option>— Select —</option>
+                <option>Builder Series</option>
+                <option>Designer Series</option>
+                <option>Premium Series</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Door Style</label>
+              <select id="w-door" class="form-control">
+                <option>— Select —</option>
+                <option>Shaker</option>
+                <option>Raised Panel</option>
+                <option>Slab</option>
+                <option>Beadboard</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 5: Review -->
+      <div id="wizard-step-5" class="hidden">
+        <div class="alert alert-success" style="margin-bottom:1.25rem">
+          <span>✓</span>
+          <span>Ready to create this project. Review the details below, then click <strong>Create Project</strong>.</span>
+        </div>
+        <div id="wizard-review"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button id="btn-wizard-back" class="btn btn-secondary" onclick="wizardBack()" style="display:none">← Back</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-ghost" onclick="closeWizard()">Cancel</button>
+      <button id="btn-wizard-next" class="btn btn-primary" onclick="wizardNext()">Next →</button>
+      <button id="btn-wizard-create" class="btn btn-primary hidden" onclick="createProject()">✓ Create Project</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     MODAL: ADD SCHEME
+════════════════════════════════════════════════ -->
+<div id="modal-scheme" class="modal-backdrop hidden">
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <h2>Add Scheme</h2>
+      <button class="close-btn" onclick="closeModal('modal-scheme')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:1rem">
+        <label class="form-label">Catalog <span class="req">*</span></label>
+        <select id="s-catalog" class="form-control" onchange="toggleSchemeExtra()">
+          <option value="">— Select a catalog —</option>
+          <option value="COSMO_FF">Cosmo Face Frame Catalog 2</option>
+          <option value="COSMO_FL">Cosmo Frameless Catalog 2</option>
+        </select>
+        <span class="form-hint">Face Frame = traditional overlay · Frameless = European full-access</span>
+      </div>
+      <div id="scheme-extra" class="hidden">
+        <div class="form-group" style="margin-bottom:1rem">
+          <label class="form-label">Scheme Name <span class="req">*</span></label>
+          <input id="s-name" class="form-control" type="text" placeholder="e.g. Kitchen — Shaker White" />
+        </div>
+        <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:1rem">
+          <div class="flex" style="border-bottom:1px solid #e2e8f0">
+            <button id="stab-construction" onclick="switchSchemeTab('construction')" style="flex:1;padding:.55rem;font-size:.82rem;font-weight:600;color:#2563eb;background:#eff6ff;border:none;border-right:1px solid #e2e8f0;cursor:pointer">Construction</button>
+            <button id="stab-style" onclick="switchSchemeTab('style')" style="flex:1;padding:.55rem;font-size:.82rem;font-weight:500;color:#64748b;background:#fff;border:none;cursor:pointer">Style / Finish</button>
+          </div>
+          <div id="stab-construction-pane" style="padding:1rem">
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">Cabinet Box</label>
+                <select id="s-box" class="form-control">
+                  <option>— Select —</option>
+                  <option>Standard Plywood Box</option>
+                  <option>Premium Plywood Box</option>
+                  <option>MDF Core Box</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Drawer Options</label>
+                <select id="s-drawer" class="form-control">
+                  <option>— Select —</option>
+                  <option>Undermount Soft-Close</option>
+                  <option>Side-Mount Standard</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div id="stab-style-pane" class="hidden" style="padding:1rem">
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">Series</label>
+                <select id="s-series" class="form-control">
+                  <option>— Select —</option>
+                  <option>Builder Series</option>
+                  <option>Designer Series</option>
+                  <option>Premium Series</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Finish</label>
+                <select id="s-finish" class="form-control">
+                  <option>— Select —</option>
+                  <option>White</option>
+                  <option>Linen</option>
+                  <option>Graphite</option>
+                  <option>Natural Oak</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Door Style</label>
+                <select id="s-door" class="form-control">
+                  <option>— Select —</option>
+                  <option>Shaker</option>
+                  <option>Raised Panel</option>
+                  <option>Slab</option>
+                  <option>Beadboard</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Drawer Front Style</label>
+                <select id="s-dfstyle" class="form-control">
+                  <option>— Select —</option>
+                  <option>Matching Door</option>
+                  <option>Slab</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-scheme')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveScheme()">Save Scheme</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     MODAL: ADD LAYOUT
+════════════════════════════════════════════════ -->
+<div id="modal-layout" class="modal-backdrop hidden">
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <h2>New Layout</h2>
+      <button class="close-btn" onclick="closeModal('modal-layout')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:1.25rem">
+        <label class="form-label">Layout Name <span class="req">*</span></label>
+        <input id="l-name" class="form-control" type="text" placeholder="e.g. Building A — Floor 3 Kitchen" />
+      </div>
+      <div class="form-group" style="margin-bottom:1.25rem">
+        <label class="form-label">Source</label>
+        <div class="flex gap-3">
+          <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-size:.85rem">
+            <input type="radio" name="layout-source" value="manual" checked onchange="toggleLayoutSource(this.value)" /> Manual entry
+          </label>
+          <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-size:.85rem">
+            <input type="radio" name="layout-source" value="kit" onchange="toggleLayoutSource(this.value)" /> Upload .kit file
+            <span class="badge badge-slate" style="margin-left:.2rem" data-tip="A .kit file is a cabinet design export from 2020 Design, Cabinet Vision, or similar software">.kit?</span>
+          </label>
+        </div>
+      </div>
+      <div id="layout-manual-fields">
+        <div class="form-group" style="margin-bottom:1rem">
+          <label class="form-label">PO Number</label>
+          <input id="l-po" class="form-control" type="text" placeholder="Optional purchase order reference" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <textarea id="l-notes" class="form-control" rows="2" placeholder="Optional notes…" style="resize:vertical"></textarea>
+        </div>
+      </div>
+      <div id="layout-kit-fields" class="hidden">
+        <div style="border:2px dashed #d1d5db;border-radius:8px;padding:2rem;text-align:center;color:#94a3b8;cursor:pointer" onclick="alert('File upload — connect to backend')">
+          <div style="font-size:2rem;margin-bottom:.5rem">📂</div>
+          <div style="font-weight:500;color:#374151;margin-bottom:.25rem">Drop a .kit file here</div>
+          <div style="font-size:.8rem">or click to browse</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-layout')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveLayout()">Create Layout</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     MODAL: ADD UNIT
+════════════════════════════════════════════════ -->
+<div id="modal-unit" class="modal-backdrop hidden">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h2>New Unit</h2>
+      <button class="close-btn" onclick="closeModal('modal-unit')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info" id="unit-layout-warning" style="margin-bottom:1rem;display:none">
+        <span>⚠</span>
+        <span>No layouts exist yet. <a href="#" onclick="closeModal('modal-unit');switchTab('layouts');return false;" style="color:#1d4ed8">Create a layout first →</a></span>
+      </div>
+      <div class="form-grid-2" style="margin-bottom:1rem">
+        <div class="form-group">
+          <label class="form-label">Building</label>
+          <input id="u-building" class="form-control" type="text" placeholder="e.g. Building A" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Floor</label>
+          <input id="u-floor" class="form-control" type="text" placeholder="e.g. 3" />
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:1rem">
+        <label class="form-label">Unit Number <span class="req">*</span></label>
+        <input id="u-number" class="form-control" type="text" placeholder="e.g. 301" />
+      </div>
+      <div class="form-group" style="margin-bottom:1rem">
+        <label class="form-label">Layout <span class="req">*</span></label>
+        <select id="u-layout" class="form-control">
+          <option value="">— Select a layout —</option>
+        </select>
+        <span class="form-hint">Layouts define the room configuration for this unit</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">PO Number</label>
+        <input id="u-po" class="form-control" type="text" placeholder="Optional" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-unit')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveUnit()">Add Unit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     MODAL: ADD TRUCK
+════════════════════════════════════════════════ -->
+<div id="modal-truck" class="modal-backdrop hidden">
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <h2>New Truck</h2>
+      <button class="close-btn" onclick="closeModal('modal-truck')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid-2" style="margin-bottom:1rem">
+        <div class="form-group">
+          <label class="form-label">Truck Type <span class="req">*</span></label>
+          <select id="t-type" class="form-control">
+            <option value="">— Select —</option>
+            <option>24 ft Box Truck (600 cu ft)</option>
+            <option>26 ft Box Truck (750 cu ft)</option>
+            <option>Semi — 53 ft Dry Van (2,400 cu ft)</option>
+            <option>Flatbed</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <input id="t-desc" class="form-control" type="text" placeholder="e.g. Truck 1 — Bldg A" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Scheduled Delivery Date <span class="req">*</span></label>
+          <input id="t-delivery" class="form-control" type="date" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Delivery Notes</label>
+          <input id="t-notes" class="form-control" type="text" placeholder="e.g. Call site super 1hr ahead" />
+        </div>
+      </div>
+      <div class="dual-listbox">
+        <div class="listbox">
+          <div class="listbox-header">Available Units</div>
+          <div class="listbox-body" id="truck-available-units"></div>
+        </div>
+        <div class="listbox-arrows">
+          <button class="arrow-btn" onclick="moveUnits('right', 'single')" title="Add selected">›</button>
+          <button class="arrow-btn" onclick="moveUnits('right', 'all')" title="Add all">»</button>
+          <button class="arrow-btn" onclick="moveUnits('left', 'single')" title="Remove selected">‹</button>
+          <button class="arrow-btn" onclick="moveUnits('left', 'all')" title="Remove all">«</button>
+        </div>
+        <div class="listbox">
+          <div class="listbox-header">Assigned to Truck</div>
+          <div class="listbox-body" id="truck-assigned-units"></div>
+        </div>
+      </div>
+      <div style="margin-top:.75rem">
+        <div class="flex justify-between text-xs text-muted" style="margin-bottom:.3rem">
+          <span>Load capacity</span>
+          <span id="truck-load-pct">0% filled</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="truck-load-bar" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-truck')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTruck()">Save Truck</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     MODAL: BULK IMPORT UNITS
+════════════════════════════════════════════════ -->
+<div id="modal-import-units" class="modal-backdrop hidden">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div>
+        <h2>Bulk Import Units</h2>
+        <div style="font-size:.8rem;color:#64748b;margin-top:.15rem">Paste CSV data or type directly — one unit per row</div>
+      </div>
+      <button class="close-btn" onclick="closeModal('modal-import-units')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info" style="margin-bottom:1rem">
+        <span>ℹ</span>
+        <div>
+          <strong>Format:</strong> Building, Floor, Unit Number, Layout Name (must match exactly), PO Number (optional)<br/>
+          <span style="font-family:monospace;font-size:.8rem;display:block;margin-top:.3rem;color:#1d4ed8">Building A, 1, 101, Standard 2BR Kitchen, PO-2026-001</span>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:1rem">
+        <label class="form-label">Paste unit rows below <span class="req">*</span></label>
+        <textarea id="import-csv" class="form-control font-mono" rows="10"
+          placeholder="Building A, 1, 101, Standard 2BR Kitchen, PO-2026-001&#10;Building A, 1, 102, Standard 2BR Kitchen, PO-2026-001&#10;Building A, 2, 201, Standard 2BR Kitchen, PO-2026-001&#10;Building B, 1, 101, Standard 1BR Kitchen, PO-2026-002"
+          style="resize:vertical;font-size:.82rem;line-height:1.6"
+          oninput="previewImport()"></textarea>
+      </div>
+      <div id="import-preview"></div>
+    </div>
+    <div class="modal-footer">
+      <div id="import-count" style="flex:1;font-size:.85rem;color:#64748b;align-self:center"></div>
+      <button class="btn btn-ghost" onclick="closeModal('modal-import-units')">Cancel</button>
+      <button class="btn btn-primary" id="btn-do-import" onclick="executeImport()" disabled>Import Units</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     MODAL: GENERATE UNITS WITH COSMO AI
+════════════════════════════════════════════════ -->
+<div id="modal-generate-units" class="modal-backdrop hidden">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div>
+        <h2>✨ Generate Units with Cosmo</h2>
+        <div style="font-size:.8rem;color:#64748b;margin-top:.15rem">Describe your units in plain English — Cosmo will generate the full list</div>
+      </div>
+      <button class="close-btn" onclick="closeModal('modal-generate-units')">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- API Key -->
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem">
+        <div style="font-size:.8rem;font-weight:600;color:#374151;margin-bottom:.4rem">
+          Anthropic API Key
+          <span style="font-weight:400;color:#94a3b8;margin-left:.4rem">(stored in your browser only — never sent to Cosmo servers)</span>
+        </div>
+        <div class="flex gap-2">
+          <input id="gen-api-key" class="form-control" type="password" placeholder="sk-ant-api03-…" style="flex:1;font-family:monospace;font-size:.82rem" />
+          <button class="btn btn-secondary btn-sm" onclick="saveApiKey()">Save Key</button>
+        </div>
+        <div id="gen-key-status" style="font-size:.75rem;margin-top:.35rem;color:#64748b"></div>
+      </div>
+      <!-- Prompt -->
+      <div class="form-group" style="margin-bottom:1rem">
+        <label class="form-label">Describe the units to generate <span class="req">*</span></label>
+        <textarea id="gen-prompt" class="form-control" rows="4" style="resize:vertical"
+          placeholder="e.g. 25 units across 5 floors — 5 kitchens, 5 bedrooms, 5 living rooms, 10 garages. Building A. PO prefix PO-2026."></textarea>
+        <div class="form-hint" style="margin-top:.3rem">Available layouts in this project will automatically be provided as context. Be as specific or general as you like.</div>
+      </div>
+      <!-- Preview table -->
+      <div id="gen-preview" style="display:none">
+        <div style="font-size:.85rem;font-weight:600;color:#1e293b;margin-bottom:.5rem" id="gen-preview-label"></div>
+        <div style="max-height:260px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px">
+          <table class="table" style="margin:0">
+            <thead>
+              <tr>
+                <th>Building</th><th>Floor</th><th>Unit #</th><th>Layout</th><th>PO Number</th>
+              </tr>
+            </thead>
+            <tbody id="gen-preview-rows"></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Error -->
+      <div id="gen-error" class="alert alert-danger hidden" style="margin-top:1rem"></div>
+    </div>
+    <div class="modal-footer">
+      <div id="gen-spinner" style="display:none;flex:1;align-items:center;gap:.6rem;font-size:.85rem;color:#6d28d9">
+        <span class="spinner"></span> Generating units…
+      </div>
+      <div id="gen-footer-space" style="flex:1"></div>
+      <button class="btn btn-ghost" onclick="closeModal('modal-generate-units')">Cancel</button>
+      <button class="btn btn-generate" id="btn-do-generate" onclick="executeGenerate()">✨ Generate</button>
+      <button class="btn btn-primary hidden" id="btn-add-generated" onclick="addGeneratedUnits()">Add Units to Project</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     MODAL: EDIT PROJECT
+════════════════════════════════════════════════ -->
+<div id="modal-edit-project" class="modal-backdrop hidden">
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <h2>Edit Project</h2>
+      <button class="close-btn" onclick="closeModal('modal-edit-project')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:1rem">
+        <label class="form-label">Project Name <span class="req">*</span></label>
+        <input id="ep-name" class="form-control" type="text" />
+      </div>
+      <div class="form-group" style="margin-bottom:1rem">
+        <label class="form-label">Description</label>
+        <textarea id="ep-desc" class="form-control" rows="2" style="resize:vertical"></textarea>
+      </div>
+      <div class="form-grid-2" style="margin-bottom:1rem">
+        <div class="form-group">
+          <label class="form-label">Customer</label>
+          <select id="ep-customer" class="form-control">
+            <option value="MRG">Meridian Realty Group (MRG)</option>
+            <option value="PSD">Parkside Developers (PSD)</option>
+            <option value="VHL">Vantage Homes LLC (VHL)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select id="ep-status" class="form-control">
+            <option>Bid Request</option>
+            <option>In Progress</option>
+            <option>On Hold</option>
+            <option>Released</option>
+            <option>Completed</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Start Date</label>
+          <input id="ep-start" class="form-control" type="date" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">End Date</label>
+          <input id="ep-end" class="form-control" type="date" />
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-project')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditProject()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//   DATA
+// ═══════════════════════════════════════════════
+const CUSTOMERS = {
+  MRG: { code: 'MRG', name: 'Meridian Realty Group', contact: 'David Harmon', factor: '92%' },
+  PSD: { code: 'PSD', name: 'Parkside Developers',   contact: 'Stacy Lim',    factor: '88%' },
+  VHL: { code: 'VHL', name: 'Vantage Homes LLC',     contact: 'Brian Torres', factor: '95%' },
+};
+
+let projects = [
+  {
+    id: 'P001', name: 'Meridian Tower — Phase 1', desc: 'Initial kitchen cabinet order for floors 1–6',
+    customer: 'MRG', status: 'In Progress', start: '2026-01-10', end: '2026-04-30',
+    billing: '123 Commerce Blvd, Suite 400, Atlanta, GA 30301',
+    shipping: '1847 Meridian Tower Way, Atlanta, GA 30309',
+    schemes: [
+      { id:'S1', catalog:'COSMO_FF', name:'Shaker White — Standard', box:'Standard Plywood Box', drawer:'Undermount Soft-Close', series:'Designer Series', finish:'White', door:'Shaker', dfstyle:'Matching Door' }
+    ],
+    layouts: [
+      { id:'L1', name:'Floor 1-2 — Kitchen', source:'manual', po:'PO-2026-001', notes:'' },
+      { id:'L2', name:'Floor 3-4 — Kitchen', source:'kit',    po:'PO-2026-002', notes:'' },
+    ],
+    units: [
+      { id:'U1', building:'Building A', floor:'1', number:'101', layout:'L1', po:'PO-2026-001', status:'In Production', truck:null },
+      { id:'U2', building:'Building A', floor:'1', number:'102', layout:'L1', po:'PO-2026-001', status:'Pending',       truck:null },
+      { id:'U3', building:'Building A', floor:'2', number:'201', layout:'L1', po:'PO-2026-001', status:'Loaded',        truck:'T1' },
+    ],
+    trucks: [
+      { id:'T1', type:'26 ft Box Truck (750 cu ft)', desc:'Truck 1 — Bldg A', assignedUnits:['U3'], deliveryDate:'2026-03-15', notes:'Call site super 1hr ahead' }
+    ],
+  },
+  {
+    id: 'P002', name: 'Parkside Commons — Bldg B', desc: 'Bathroom vanities and laundry units',
+    customer: 'PSD', status: 'Bid Request', start: '2026-02-01', end: '2026-06-15',
+    billing: '456 Business Park Dr, Atlanta, GA 30302',
+    shipping: '99 Parkside Ave, Decatur, GA 30030',
+    schemes: [],
+    layouts: [],
+    units: [],
+    trucks: [],
+  },
+  {
+    id: 'P003', name: 'Vantage Village — Phase 2', desc: 'Full kitchen and bath package for 48 units',
+    customer: 'VHL', status: 'Released', start: '2025-09-01', end: '2026-03-31',
+    billing: '789 Vantage Blvd, Marietta, GA 30060',
+    shipping: '1200 Village Circle, Marietta, GA 30060',
+    schemes: [
+      { id:'S2', catalog:'COSMO_FL', name:'Frameless Gray Slate', box:'Premium Plywood Box', drawer:'Undermount Soft-Close', series:'Premium Series', finish:'Graphite', door:'Slab', dfstyle:'Slab' }
+    ],
+    layouts: [
+      { id:'L3', name:'Standard Kitchen Layout', source:'kit', po:'PO-2025-099', notes:'Approved by client 2025-08-20' }
+    ],
+    units: [
+      { id:'U4', building:'Bldg 1', floor:'1', number:'101', layout:'L3', po:'PO-2025-099', status:'Delivered', truck:'T2' },
+      { id:'U5', building:'Bldg 1', floor:'1', number:'102', layout:'L3', po:'PO-2025-099', status:'Delivered', truck:'T2' },
+    ],
+    trucks: [
+      { id:'T2', type:'Semi — 53 ft Dry Van (2,400 cu ft)', desc:'Main Delivery', assignedUnits:['U4','U5'], deliveryDate:'2026-01-20', notes:'' }
+    ],
+  },
+  {
+    id: 'P004', name: 'Riverside Lofts — Model Unit', desc: 'Single model unit kitchen display',
+    customer: 'MRG', status: 'Completed', start: '2025-11-01', end: '2026-01-15',
+    billing: '123 Commerce Blvd, Suite 400, Atlanta, GA 30301',
+    shipping: '500 Riverside Drive, Atlanta, GA 30328',
+    schemes: [
+      { id:'S3', catalog:'COSMO_FF', name:'Shaker Linen — Premium', box:'Premium Plywood Box', drawer:'Undermount Soft-Close', series:'Premium Series', finish:'Linen', door:'Shaker', dfstyle:'Matching Door' }
+    ],
+    layouts: [
+      { id:'L4', name:'Model Kitchen', source:'manual', po:'PO-2025-077', notes:'' }
+    ],
+    units: [
+      { id:'U6', building:'Main', floor:'1', number:'Model', layout:'L4', po:'PO-2025-077', status:'Delivered', truck:'T3' }
+    ],
+    trucks: [
+      { id:'T3', type:'24 ft Box Truck (600 cu ft)', desc:'Model Delivery', assignedUnits:['U6'], deliveryDate:'2026-01-12', notes:'' }
+    ],
+  },
+];
+
+const UNIT_STATUS_BADGE = {
+  'Pending':        'badge-slate',
+  'In Production':  'badge-amber',
+  'Ready to Ship':  'badge-sky',
+  'Loaded':         'badge-blue',
+  'Delivered':      'badge-green',
+};
+const UNIT_STATUSES = ['Pending', 'In Production', 'Ready to Ship', 'Loaded', 'Delivered'];
+
+let currentProject = null;
+let currentTab = 'overview';
+let wizardStep = 1;
+const WIZARD_TOTAL = 5;
+
+// ═══════════════════════════════════════════════
+//   ROUTING
+// ═══════════════════════════════════════════════
+function showPage(page) {
+  document.getElementById('page-projects-list').classList.toggle('hidden', page !== 'projects-list');
+  document.getElementById('page-project-detail').classList.toggle('hidden', page !== 'project-detail');
+}
+
+// ═══════════════════════════════════════════════
+//   PROJECTS LIST
+// ═══════════════════════════════════════════════
+const STATUS_BADGE = {
+  'Bid Request': 'badge-amber',
+  'In Progress': 'badge-blue',
+  'On Hold':     'badge-slate',
+  'Released':    'badge-purple',
+  'Completed':   'badge-green',
+};
+
+function renderProjectsList(list) {
+  const tbody = document.getElementById('projects-tbody');
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:2.5rem;font-size:.85rem">No projects match your filters</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(p => {
+    const cust = CUSTOMERS[p.customer] || {};
+    const setupDone = getSetupScore(p);
+    const setupPct = Math.round((setupDone.done / setupDone.total) * 100);
+    const setupColor = setupPct === 100 ? '#16a34a' : setupPct > 0 ? '#2563eb' : '#d1d5db';
+    return `<tr onclick="openProject('${p.id}')">
+      <td><strong>${p.name}</strong><br/><span class="text-xs text-muted">${p.id}</span></td>
+      <td>${cust.name || '—'}<br/><span class="text-xs font-mono text-muted">${p.customer}</span></td>
+      <td><span class="badge ${STATUS_BADGE[p.status] || 'badge-slate'}">${p.status}</span></td>
+      <td class="text-sm">${fmtDate(p.start)}</td>
+      <td class="text-sm">${fmtDate(p.end)}</td>
+      <td class="text-sm">${p.schemes.length}</td>
+      <td class="text-sm">${p.units.length}</td>
+      <td style="min-width:80px">
+        <div class="flex items-center gap-2">
+          <div class="progress-bar" style="flex:1;height:6px"><div class="progress-fill" style="width:${setupPct}%;background:${setupColor}"></div></div>
+          <span class="text-xs" style="color:${setupColor};font-weight:600;min-width:28px">${setupPct}%</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+  document.getElementById('projects-count').textContent = `Showing ${list.length} project${list.length === 1 ? '' : 's'}`;
+}
+
+function filterProjects() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const fc = document.getElementById('filter-customer').value;
+  const fs = document.getElementById('filter-status').value;
+  const list = projects.filter(p => {
+    const cust = CUSTOMERS[p.customer] || {};
+    const match = !q || p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q) || cust.name.toLowerCase().includes(q);
+    const matchC = !fc || cust.name === fc;
+    const matchS = !fs || p.status === fs;
+    return match && matchC && matchS;
+  });
+  renderProjectsList(list);
+}
+
+function clearFilters() {
+  document.getElementById('search-input').value = '';
+  document.getElementById('filter-customer').value = '';
+  document.getElementById('filter-status').value = '';
+  document.getElementById('filter-date').value = '';
+  filterProjects();
+}
+
+function getSetupScore(p) {
+  const checks = [
+    { done: !!p.customer },
+    { done: !!(p.billing && p.shipping) },
+    { done: p.schemes.length > 0 },
+    { done: p.layouts.length > 0 },
+    { done: p.units.length > 0 },
+    { done: p.trucks.length > 0 },
+  ];
+  return { done: checks.filter(c => c.done).length, total: checks.length };
+}
+
+// ═══════════════════════════════════════════════
+//   PROJECT DETAIL
+// ═══════════════════════════════════════════════
+function openProject(id) {
+  currentProject = projects.find(p => p.id === id);
+  if (!currentProject) return;
+  renderProjectDetail();
+  showPage('project-detail');
+}
+
+function renderProjectDetail() {
+  const p = currentProject;
+  const cust = CUSTOMERS[p.customer] || {};
+
+  document.getElementById('detail-breadcrumb').textContent = p.name;
+  document.getElementById('detail-title').textContent = p.name;
+  document.getElementById('detail-subtitle').textContent = `${cust.name || '—'} · ${p.id}`;
+
+  const badge = document.getElementById('detail-status-badge');
+  badge.textContent = p.status;
+  badge.className = `badge ${STATUS_BADGE[p.status] || 'badge-slate'}`;
+
+  // Info grid
+  document.getElementById('project-info-grid').innerHTML = [
+    { label: 'Project ID',    value: p.id },
+    { label: 'Status',        value: p.status },
+    { label: 'Customer Code', value: p.customer || '—', cls: 'font-mono' },
+    { label: 'Customer Name', value: cust.name || '—' },
+    { label: 'Start Date',    value: fmtDate(p.start) },
+    { label: 'End Date',      value: fmtDate(p.end) },
+    { label: 'Description',   value: p.desc || '—', colspan: true },
+  ].map(item => `
+    <div class="info-item${item.colspan ? '" style="grid-column:1/-1' : ''}">
+      <div class="label">${item.label}</div>
+      <div class="value ${item.cls || ''} ${item.value === '—' ? 'empty' : ''}">${item.value}</div>
+    </div>
+  `).join('');
+
+  document.getElementById('bill-to-block').innerHTML = p.billing
+    ? p.billing.split(', ').join('<br/>') : '<span style="color:#cbd5e1;font-style:italic">Not set</span>';
+  document.getElementById('ship-to-block').innerHTML = p.shipping
+    ? p.shipping.split(', ').join('<br/>') : '<span style="color:#cbd5e1;font-style:italic">Not set</span>';
+
+  // Project stats (replaces always-zero pricing summary)
+  const psEl = document.getElementById('project-stats-block');
+  const statusBreakdown = UNIT_STATUSES.map(s => {
+    const n = p.units.filter(u => u.status === s).length;
+    return n > 0 ? `<span class="badge ${UNIT_STATUS_BADGE[s]}" style="font-size:.72rem">${s}: ${n}</span>` : '';
+  }).filter(Boolean).join(' ');
+  psEl.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:${p.units.length ? '1rem' : '0'}">
+      <div style="text-align:center;padding:.75rem;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">
+        <div style="font-size:1.5rem;font-weight:700;color:#1e293b">${p.schemes.length}</div>
+        <div style="font-size:.72rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em;margin-top:.2rem">Scheme${p.schemes.length !== 1 ? 's' : ''}</div>
+      </div>
+      <div style="text-align:center;padding:.75rem;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">
+        <div style="font-size:1.5rem;font-weight:700;color:#1e293b">${p.layouts.length}</div>
+        <div style="font-size:.72rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em;margin-top:.2rem">Layout${p.layouts.length !== 1 ? 's' : ''}</div>
+      </div>
+      <div style="text-align:center;padding:.75rem;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">
+        <div style="font-size:1.5rem;font-weight:700;color:#1e293b">${p.units.length}</div>
+        <div style="font-size:.72rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em;margin-top:.2rem">Unit${p.units.length !== 1 ? 's' : ''}</div>
+      </div>
+      <div style="text-align:center;padding:.75rem;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">
+        <div style="font-size:1.5rem;font-weight:700;color:#1e293b">${p.trucks.length}</div>
+        <div style="font-size:.72rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em;margin-top:.2rem">Truck${p.trucks.length !== 1 ? 's' : ''}</div>
+      </div>
+    </div>
+    ${p.units.length ? `<div style="font-size:.75rem;color:#64748b;font-weight:600;margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em">Unit Status Breakdown</div><div class="flex gap-2" style="flex-wrap:wrap">${statusBreakdown}</div>` : ''}
+  `;
+
+  renderTabs();
+  renderChecklist();
+  switchTab(currentTab === 'overview' ? 'overview' : currentTab);
+}
+
+function renderTabs() {
+  const p = currentProject;
+  const hasScheme  = p.schemes.length > 0;
+  const hasLayout  = p.layouts.length > 0;
+  const hasUnit    = p.units.length > 0;
+  const hasTruck   = p.trucks.length > 0;
+
+  const tabs = [
+    { id: 'overview', label: 'Overview',  locked: false },
+    { id: 'schemes',  label: 'Schemes',   locked: false,      count: p.schemes.length },
+    { id: 'layouts',  label: 'Layouts',   locked: !hasScheme, count: p.layouts.length, tip: 'Add a scheme first' },
+    { id: 'units',    label: 'Units',     locked: !hasLayout, count: p.units.length,   tip: 'Add a layout first' },
+    { id: 'trucks',   label: 'Trucks',    locked: !hasUnit,   count: p.trucks.length,  tip: 'Add units first' },
+    // Replacement Orders only appears once orders are released
+    ...(p.hasReleasedOrders ? [{ id: 'replacements', label: 'Replacement Orders', locked: false }] : []),
+  ];
+
+  const bar = document.getElementById('tab-bar');
+  bar.innerHTML = tabs.map(t => {
+    const isActive = t.id === currentTab && !t.locked;
+    const countBadge = t.count !== undefined && t.count > 0 ? `<span class="badge badge-slate" style="font-size:.65rem;padding:.1rem .35rem">${t.count}</span>` : '';
+    const lockIcon = t.locked ? `<span class="lock-icon" ${t.tip ? `data-tip="${t.tip}"` : ''}>🔒</span>` : '';
+    return `<button class="tab-btn ${isActive ? 'active' : ''} ${t.locked ? 'locked' : ''}"
+      ${t.locked ? '' : `onclick="switchTab('${t.id}')"`}>${t.label}${countBadge}${lockIcon}</button>`;
+  }).join('');
+}
+
+function switchTab(id) {
+  const p = currentProject;
+  // Respect locks
+  if (id === 'layouts' && p.schemes.length === 0) return;
+  if (id === 'units'   && p.layouts.length === 0) return;
+  if (id === 'trucks'  && p.units.length === 0) return;
+  if (id === 'replacements' && !currentProject.hasReleasedOrders) return;
+
+  currentTab = id;
+  document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+  document.getElementById(`tab-${id}`).classList.add('active');
+  renderTabs();
+  renderTabContent(id);
+}
+
+function renderTabContent(id) {
+  if (id === 'schemes')  renderSchemes();
+  if (id === 'layouts')  renderLayouts();
+  if (id === 'units')    renderUnits();
+  if (id === 'trucks')   renderTrucks();
+}
+
+// ── Schemes ──
+function renderSchemes() {
+  const p = currentProject;
+  const el = document.getElementById('schemes-list');
+  if (!p.schemes.length) {
+    el.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">🗂️</div>
+      <h3>No schemes yet</h3>
+      <p>A scheme defines the catalog, construction method, and finish style used for cabinet orders in this project.</p>
+      <button class="btn btn-primary" onclick="openAddScheme()">＋ Add First Scheme</button>
+    </div>`;
+    return;
+  }
+  el.innerHTML = p.schemes.map(s => `
+    <div class="scheme-card" style="margin-bottom:.75rem">
+      <div style="flex:1">
+        <div class="flex items-center gap-2" style="margin-bottom:.4rem">
+          <strong>${s.name}</strong>
+          <span class="badge badge-blue font-mono">${s.catalog}</span>
+        </div>
+        <div class="scheme-detail">
+          <div class="scheme-detail-item"><div class="dl">Box</div><div class="dv">${s.box || '—'}</div></div>
+          <div class="scheme-detail-item"><div class="dl">Drawer</div><div class="dv">${s.drawer || '—'}</div></div>
+          <div class="scheme-detail-item"><div class="dl">Series</div><div class="dv">${s.series || '—'}</div></div>
+          <div class="scheme-detail-item"><div class="dl">Finish</div><div class="dv">${s.finish || '—'}</div></div>
+          <div class="scheme-detail-item"><div class="dl">Door Style</div><div class="dv">${s.door || '—'}</div></div>
+          <div class="scheme-detail-item"><div class="dl">Drawer Front</div><div class="dv">${s.dfstyle || '—'}</div></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.4rem;margin-left:1rem">
+        <button class="btn btn-ghost btn-sm btn-icon" title="Edit" onclick="alert('Edit scheme — connect to backend')">✏</button>
+        <button class="btn btn-ghost btn-sm btn-icon" title="Delete" onclick="removeScheme('${s.id}')">🗑</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Layouts ──
+function renderLayouts() {
+  const p = currentProject;
+  const el = document.getElementById('layouts-list');
+  if (!p.layouts.length) {
+    el.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">📐</div>
+      <h3>No layouts yet</h3>
+      <p>Create one layout per <em>room type</em> — e.g. "Standard 2BR Kitchen." You'll assign that same layout to all matching units. You don't create a new layout per apartment.</p>
+      <p style="margin-top:.5rem;font-size:.78rem;color:#94a3b8">Supports manual entry or .kit file import from 2020 Design, Cabinet Vision, etc.</p>
+      <button class="btn btn-primary" style="margin-top:1rem" onclick="openAddLayout()">＋ Create First Layout</button>
+    </div>`;
+    return;
+  }
+  el.innerHTML = `<div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>Layout Name (Template)</th><th>Source</th><th>PO Number</th><th>Used by Units</th><th>Notes</th><th></th>
+      </tr></thead>
+      <tbody>
+        ${p.layouts.map(l => {
+          const unitCount = p.units.filter(u => u.layout === l.id).length;
+          return `<tr>
+            <td><strong>${l.name}</strong></td>
+            <td><span class="badge ${l.source==='kit' ? 'badge-purple' : 'badge-slate'}">${l.source === 'kit' ? '.kit file' : 'Manual'}</span></td>
+            <td class="td-mono">${l.po || '—'}</td>
+            <td>
+              <span style="font-weight:600;color:${unitCount>0?'#1d4ed8':'#94a3b8'}">${unitCount} unit${unitCount!==1?'s':''}</span>
+              ${unitCount===0?'<span class="text-xs text-muted" style="margin-left:.3rem">— not yet assigned</span>':''}
+            </td>
+            <td class="text-muted text-sm">${l.notes || '—'}</td>
+            <td>
+              <button class="btn btn-ghost btn-sm btn-icon" title="Delete layout" onclick="removeLayout('${l.id}')">🗑</button>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+// ── Units ──
+function renderUnits() {
+  const p = currentProject;
+  const el = document.getElementById('units-list');
+
+  // Info banner: status breakdown
+  const banner = document.getElementById('units-info-banner');
+  const breakdown = UNIT_STATUSES.map(s => {
+    const n = p.units.filter(u => u.status === s).length;
+    return n > 0 ? `${s}: <strong>${n}</strong>` : '';
+  }).filter(Boolean).join(' · ');
+  banner.innerHTML = `<span>ℹ</span> <span>${p.units.length} total unit${p.units.length !== 1 ? 's' : ''}${breakdown ? ' — ' + breakdown : ''}</span>`;
+  banner.style.display = 'flex';
+
+  if (!p.units.length) {
+    document.getElementById('unit-filter-bar').style.display = 'none';
+    el.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">🏠</div>
+      <h3>No units yet</h3>
+      <p>Add units individually, bulk import a CSV list, or let Cosmo AI generate them from a plain-English description.</p>
+      <div class="flex gap-2" style="justify-content:center;margin-top:1rem;flex-wrap:wrap">
+        <button class="btn btn-generate" onclick="openGenerateUnits()">✨ Generate with Cosmo</button>
+        <button class="btn btn-secondary" onclick="openImportUnits()">↓ Bulk Import</button>
+        <button class="btn btn-primary" onclick="openAddUnit()">＋ Add First Unit</button>
+      </div>
+    </div>`;
+    return;
+  }
+
+  // Populate filter bar dropdowns
+  const fb = document.getElementById('unit-filter-bar');
+  fb.style.display = 'flex';
+  const buildings = [...new Set(p.units.map(u => u.building).filter(Boolean))].sort();
+  const ufb = document.getElementById('uf-building');
+  const curB = ufb.value;
+  ufb.innerHTML = '<option value="">All Buildings</option>' + buildings.map(b => `<option${b===curB?' selected':''}>${b}</option>`).join('');
+  const ufl = document.getElementById('uf-layout');
+  const curL = ufl.value;
+  ufl.innerHTML = '<option value="">All Layouts</option>' + p.layouts.map(l => `<option value="${l.id}"${l.id===curL?' selected':''}>${l.name}</option>`).join('');
+
+  filterUnitsDisplay();
+}
+
+function filterUnitsDisplay() {
+  const p = currentProject;
+  const q  = document.getElementById('uf-search')?.value.toLowerCase() || '';
+  const fb = document.getElementById('uf-building')?.value || '';
+  const fs = document.getElementById('uf-status')?.value  || '';
+  const fl = document.getElementById('uf-layout')?.value  || '';
+
+  const filtered = p.units.filter(u => {
+    const matchQ  = !q  || u.building.toLowerCase().includes(q) || u.number.toLowerCase().includes(q);
+    const matchB  = !fb || u.building === fb;
+    const matchS  = !fs || u.status === fs;
+    const matchL  = !fl || u.layout === fl;
+    return matchQ && matchB && matchS && matchL;
+  });
+
+  const el = document.getElementById('units-list');
+  if (!filtered.length) {
+    el.innerHTML = `<div style="text-align:center;padding:2rem;color:#94a3b8;font-size:.85rem">No units match your filters</div>`;
+    return;
+  }
+
+  el.innerHTML = `<div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>Building</th><th>Floor</th><th>Unit Number</th><th>Layout</th><th>PO Number</th><th>Status</th><th>Truck</th><th></th>
+      </tr></thead>
+      <tbody>
+        ${filtered.map(u => {
+          const layout = p.layouts.find(l => l.id === u.layout);
+          const truck  = p.trucks.find(t  => t.id  === u.truck);
+          const statusOpts = UNIT_STATUSES.map(s =>
+            `<option value="${s}"${u.status===s?' selected':''}>${s}</option>`).join('');
+          return `<tr>
+            <td>${u.building || '—'}</td>
+            <td>${u.floor || '—'}</td>
+            <td><strong>${u.number}</strong></td>
+            <td class="text-sm">${layout ? layout.name : '<span class="text-muted">—</span>'}</td>
+            <td class="td-mono">${u.po || '—'}</td>
+            <td>
+              <select class="form-control" style="padding:.2rem .5rem;font-size:.78rem;height:auto;width:auto;border-color:transparent;background:transparent"
+                onchange="changeUnitStatus('${u.id}', this.value)">
+                ${statusOpts}
+              </select>
+            </td>
+            <td class="text-sm">${truck ? truck.desc : '<span class="text-muted">—</span>'}</td>
+            <td><button class="btn btn-ghost btn-sm btn-icon" title="Remove unit" onclick="removeUnit('${u.id}')">🗑</button></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+function changeUnitStatus(uid, newStatus) {
+  const u = currentProject.units.find(x => x.id === uid);
+  if (u) {
+    u.status = newStatus;
+    // Update info banner to reflect new counts
+    renderProjectDetail();
+    switchTab('units');
+  }
+}
+
+function clearUnitFilters() {
+  document.getElementById('uf-search').value = '';
+  document.getElementById('uf-building').value = '';
+  document.getElementById('uf-status').value = '';
+  document.getElementById('uf-layout').value = '';
+  filterUnitsDisplay();
+}
+
+// ── Trucks ──
+function renderTrucks() {
+  const p = currentProject;
+  const el = document.getElementById('trucks-list');
+  if (!p.trucks.length) {
+    el.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">🚛</div>
+      <h3>No trucks yet</h3>
+      <p>Create a truck and assign units to track delivery capacity and logistics.</p>
+      <button class="btn btn-primary" onclick="openAddTruck()">＋ Add First Truck</button>
+    </div>`;
+    return;
+  }
+  el.innerHTML = p.trucks.map(t => {
+    const assignedUnits = t.assignedUnits.map(uid => p.units.find(u => u.id === uid)).filter(Boolean);
+    const pct = Math.min(100, Math.round((assignedUnits.length / 10) * 100));
+    const deliveryLabel = t.deliveryDate
+      ? `<span style="font-size:.8rem;color:#475569">📅 Delivery: <strong>${fmtDate(t.deliveryDate)}</strong></span>`
+      : `<span style="font-size:.8rem;color:#f97316">⚠ No delivery date set</span>`;
+    return `<div class="card" style="margin-bottom:.75rem">
+      <div class="card-header">
+        <div>
+          <strong>${t.desc || t.type}</strong>
+          <span class="badge badge-slate" style="margin-left:.5rem">${t.type}</span>
+          <span style="margin-left:.75rem">${deliveryLabel}</span>
+          ${t.notes ? `<span style="font-size:.78rem;color:#94a3b8;margin-left:.75rem">· ${t.notes}</span>` : ''}
+        </div>
+        <div class="flex gap-2 items-center">
+          <div class="progress-bar" style="width:100px"><div class="progress-fill" style="width:${pct}%"></div></div>
+          <span class="text-xs text-muted">${pct}% filled</span>
+          <button class="btn btn-ghost btn-sm btn-icon" title="Remove truck" onclick="removeTruck('${t.id}')">🗑</button>
+        </div>
+      </div>
+      <div class="card-body" style="padding:.75rem 1.25rem">
+        ${assignedUnits.length ? `
+          <div class="tag-row">
+            ${assignedUnits.map(u => `<span class="tag">Bldg ${u.building} · Fl ${u.floor} · Unit ${u.number}</span>`).join('')}
+          </div>
+        ` : `<span class="text-muted text-sm">No units assigned to this truck yet</span>`}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Checklist ──
+function renderChecklist() {
+  const p = currentProject;
+  const steps = [
+    { label: 'Project Created',   sub: p.name,
+      done: true, action: null },
+    { label: 'Customer Assigned', sub: CUSTOMERS[p.customer]?.name || 'Not set',
+      done: !!p.customer,               action: () => openEditProject() },
+    { label: 'Addresses Set',     sub: p.billing ? 'Billing & shipping confirmed' : 'Not set',
+      done: !!(p.billing && p.shipping), action: () => openEditProject() },
+    { label: 'Scheme Added',      sub: p.schemes.length ? `${p.schemes.length} scheme${p.schemes.length>1?'s':''}` : 'Required before layouts',
+      done: p.schemes.length > 0,       action: () => { switchTab('schemes'); openAddScheme(); } },
+    { label: 'Layout Added',      sub: p.layouts.length ? `${p.layouts.length} layout${p.layouts.length>1?'s':''}` : 'Required before units',
+      done: p.layouts.length > 0,       action: () => { switchTab('layouts'); openAddLayout(); } },
+    { label: 'Units Added',       sub: p.units.length  ? `${p.units.length} unit${p.units.length>1?'s':''}` : 'Required before trucks',
+      done: p.units.length > 0,         action: () => { switchTab('units'); openAddUnit(); } },
+    { label: 'Trucks Assigned',   sub: p.trucks.length ? `${p.trucks.length} truck${p.trucks.length>1?'s':''}` : 'Assign units to delivery trucks',
+      done: p.trucks.length > 0,        action: () => { switchTab('trucks'); openAddTruck(); } },
+  ];
+
+  const doneCount = steps.filter(s => s.done).length;
+  document.getElementById('setup-progress-label').textContent = `${doneCount} / ${steps.length}`;
+
+  let firstPending = true;
+  document.getElementById('setup-checklist').innerHTML = steps.map((s, i) => {
+    const cls  = s.done ? 'done'  : (firstPending ? 'current' : 'pending');
+    const icon = s.done ? '✓'    : (firstPending ? '●'       : '○');
+    const actionable = !s.done && s.action;
+    if (!s.done) firstPending = false;
+
+    const inner = `
+      <div class="check-icon ${cls}">${icon}</div>
+      <div class="check-text">
+        <strong>${s.label}</strong>
+        <span>${s.sub}${actionable ? ' <span style="color:#2563eb;font-size:.7rem">→ Go</span>' : ''}</span>
+      </div>`;
+
+    return actionable
+      ? `<div class="checklist-item actionable" onclick="checklistAction(${i})" title="Click to go to this step">${inner}</div>`
+      : `<div class="checklist-item">${inner}</div>`;
+  }).join('');
+}
+
+// Store actions for checklist clicks (avoids inline closures in HTML)
+const _checklistActions = [];
+function checklistAction(i) {
+  const p = currentProject;
+  const actions = [
+    null,
+    () => openEditProject(),
+    () => openEditProject(),
+    () => { switchTab('schemes'); openAddScheme(); },
+    () => { if (p.schemes.length) { switchTab('layouts'); openAddLayout(); } else { switchTab('schemes'); openAddScheme(); } },
+    () => { if (p.layouts.length) { switchTab('units');   openAddUnit();   } else { switchTab('layouts'); openAddLayout(); } },
+    () => { if (p.units.length)   { switchTab('trucks');  openAddTruck();  } else { switchTab('units');   openAddUnit();   } },
+  ];
+  if (actions[i]) actions[i]();
+}
+
+// ═══════════════════════════════════════════════
+//   WIZARD
+// ═══════════════════════════════════════════════
+const WIZARD_STEPS = [
+  'Basic Information', 'Customer', 'Addresses', 'Initial Scheme', 'Review & Create'
+];
+
+let wizardDirty = false;
+
+function openWizard() {
+  wizardStep = 1;
+  wizardDirty = false;
+  // set today default; leave end date blank to force intentional entry
+  const today = new Date();
+  document.getElementById('w-start').value = today.toISOString().slice(0,10);
+  document.getElementById('w-end').value = '';
+  document.getElementById('w-name').value = '';
+  document.getElementById('w-desc').value = '';
+  document.getElementById('w-status').value = 'Bid Request';
+  document.getElementById('w-customer').value = '';
+  document.getElementById('customer-preview').classList.add('hidden');
+  document.getElementById('w-catalog').value = '';
+  document.getElementById('scheme-fields').classList.add('hidden');
+  // Reset scheme detail fields
+  ['w-scheme-name','w-box','w-drawer','w-series','w-door'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.tagName === 'SELECT' ? el.selectedIndex = 0 : el.value = '';
+  });
+  // clear any previous validation errors
+  document.querySelectorAll('#wizard-modal .form-group.has-error').forEach(g => g.classList.remove('has-error'));
+  document.getElementById('w-date-error').classList.remove('visible');
+  document.getElementById('w-name-counter').textContent = '0 / 80';
+  renderWizard();
+  document.getElementById('wizard-modal').classList.remove('hidden');
+  // track dirty state on any input change within wizard
+  document.getElementById('wizard-modal').addEventListener('input', markWizardDirty, { once: false });
+  document.getElementById('wizard-modal').addEventListener('change', markWizardDirty, { once: false });
+}
+
+function markWizardDirty() { wizardDirty = true; }
+
+// Keyboard navigation for wizard
+document.addEventListener('keydown', function(e) {
+  const modal = document.getElementById('wizard-modal');
+  if (modal.classList.contains('hidden')) return;
+
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    closeWizard();
+  }
+  if (e.key === 'Enter' && !e.shiftKey) {
+    // Don't intercept Enter in textareas
+    if (e.target.tagName === 'TEXTAREA') return;
+    e.preventDefault();
+    if (wizardStep === WIZARD_TOTAL) {
+      createProject();
+    } else {
+      wizardNext();
+    }
+  }
+});
+
+function closeWizard() {
+  if (wizardDirty) {
+    if (!confirm('You have unsaved changes. Discard this new project?')) return;
+  }
+  wizardDirty = false;
+  document.getElementById('wizard-modal').classList.add('hidden');
+}
+
+// Inline validation helpers
+function showFieldError(input) {
+  const group = input.closest('.form-group');
+  if (group) group.classList.add('has-error');
+  input.focus();
+}
+
+function clearFieldError(input) {
+  const group = input.closest('.form-group');
+  if (group) group.classList.remove('has-error');
+}
+
+let _prevWizardStep = 1; // track direction for slide animation
+
+function getStepSummary(stepNum) {
+  switch(stepNum) {
+    case 1: {
+      const name = document.getElementById('w-name')?.value?.trim();
+      return name || '';
+    }
+    case 2: {
+      const custKey = document.getElementById('w-customer')?.value;
+      return custKey ? (CUSTOMERS[custKey]?.name || custKey) : '';
+    }
+    case 3: return 'Addresses set';
+    case 4: {
+      const cat = document.getElementById('w-catalog')?.value;
+      return cat || 'Skipped';
+    }
+    default: return '';
+  }
+}
+
+function renderWizard() {
+  const isForward = wizardStep >= _prevWizardStep;
+  _prevWizardStep = wizardStep;
+
+  // Step counter in header
+  const titleEl = document.getElementById('wizard-step-title');
+  titleEl.innerHTML = `${WIZARD_STEPS[wizardStep-1]} <span class="wizard-step-counter">Step ${wizardStep} of ${WIZARD_TOTAL}</span>`;
+
+  // Progress dots
+  const prog = document.getElementById('wizard-progress');
+  prog.innerHTML = '';
+  for (let i = 1; i <= WIZARD_TOTAL; i++) {
+    const wrap = document.createElement('div');
+    wrap.className = 'step-wrap';
+    const dot = document.createElement('div');
+    const isDone = i < wizardStep;
+    const isActive = i === wizardStep;
+    dot.className = `step-dot ${isDone ? 'done' : isActive ? 'active' : ''}${isDone ? ' clickable' : ''}`;
+    dot.textContent = isDone ? '✓' : i;
+    // Clickable: only completed steps
+    if (isDone) {
+      dot.onclick = () => { wizardStep = i; renderWizard(); };
+      dot.title = `Go back to: ${WIZARD_STEPS[i-1]}`;
+    }
+    const lbl = document.createElement('div');
+    lbl.className = `step-label ${isDone ? 'done' : isActive ? 'active' : ''}`;
+    lbl.textContent = WIZARD_STEPS[i-1];
+    wrap.appendChild(dot); wrap.appendChild(lbl);
+
+    // Step summary chip for completed steps
+    if (isDone) {
+      const summary = getStepSummary(i);
+      if (summary) {
+        const chip = document.createElement('div');
+        chip.className = 'step-summary';
+        chip.textContent = summary;
+        chip.title = summary;
+        wrap.appendChild(chip);
+      }
+    }
+
+    prog.appendChild(wrap);
+    if (i < WIZARD_TOTAL) {
+      const conn = document.createElement('div');
+      conn.className = `step-connector ${i < wizardStep ? 'done' : ''}`;
+      prog.appendChild(conn);
+    }
+  }
+
+  // Progress bar
+  const pct = Math.round((wizardStep / WIZARD_TOTAL) * 100);
+  document.getElementById('wizard-progress-fill').style.width = pct + '%';
+
+  // Show correct step pane with animation
+  for (let i = 1; i <= WIZARD_TOTAL; i++) {
+    const pane = document.getElementById(`wizard-step-${i}`);
+    if (i === wizardStep) {
+      pane.classList.remove('hidden');
+      pane.className = pane.className.replace(/wizard-step-pane\s*(slide-back)?/g, '').trim();
+      // Force reflow for animation restart
+      void pane.offsetWidth;
+      pane.classList.add('wizard-step-pane');
+      if (!isForward) pane.classList.add('slide-back');
+    } else {
+      pane.classList.add('hidden');
+      pane.classList.remove('wizard-step-pane', 'slide-back');
+    }
+  }
+
+  document.getElementById('btn-wizard-back').style.display = wizardStep > 1 ? '' : 'none';
+  document.getElementById('btn-wizard-next').classList.toggle('hidden', wizardStep === WIZARD_TOTAL);
+  document.getElementById('btn-wizard-create').classList.toggle('hidden', wizardStep !== WIZARD_TOTAL);
+
+  if (wizardStep === WIZARD_TOTAL) renderWizardReview();
+
+  // Scroll modal to top on step change
+  const modal = document.querySelector('#wizard-modal .modal');
+  if (modal) modal.scrollTop = 0;
+
+  // Auto-focus first input on new step
+  autoFocusStep(wizardStep);
+}
+
+function autoFocusStep(step) {
+  requestAnimationFrame(() => {
+    const pane = document.getElementById(`wizard-step-${step}`);
+    if (!pane) return;
+    const firstInput = pane.querySelector('input:not([type=hidden]):not([type=date]):not(:disabled), select:not(:disabled), textarea:not(:disabled)');
+    if (firstInput) firstInput.focus();
+  });
+}
+
+function updateCharCounter() {
+  const input = document.getElementById('w-name');
+  const counter = document.getElementById('w-name-counter');
+  const len = input.value.length;
+  const max = 80;
+  counter.textContent = `${len} / ${max}`;
+  counter.classList.toggle('warn', len >= 60 && len < max);
+  counter.classList.toggle('over', len >= max);
+}
+
+function showToast(message, type = 'success') {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.innerHTML = `<span class="toast-icon">${type === 'success' ? '✓' : 'ℹ'}</span><span>${message}</span><button class="toast-close" onclick="this.parentElement.remove()">✕</button>`;
+  container.appendChild(toast);
+  setTimeout(() => { if (toast.parentNode) toast.remove(); }, 3200);
+}
+
+function validateDates() {
+  const start = document.getElementById('w-start').value;
+  const end = document.getElementById('w-end').value;
+  const errEl = document.getElementById('w-date-error');
+  if (start && end && end <= start) {
+    errEl.classList.add('visible');
+    return false;
+  }
+  errEl.classList.remove('visible');
+  return true;
+}
+
+function skipSchemeStep() {
+  // Clear scheme selection and advance
+  document.getElementById('w-catalog').value = '';
+  document.getElementById('scheme-fields').classList.add('hidden');
+  wizardStep = 5;
+  renderWizard();
+}
+
+function wizardNext() {
+  // Inline validation — highlight the offending field, no alert()
+  if (wizardStep === 1) {
+    const nameEl = document.getElementById('w-name');
+    if (!nameEl.value.trim()) { showFieldError(nameEl); return; }
+    if (!validateDates()) return;
+  }
+  if (wizardStep === 2) {
+    const custEl = document.getElementById('w-customer');
+    if (!custEl.value) { showFieldError(custEl); return; }
+  }
+  wizardStep++;
+  renderWizard();
+}
+
+function wizardBack() {
+  wizardStep--;
+  renderWizard();
+}
+
+document.getElementById('w-customer').addEventListener('change', function() {
+  const cust = CUSTOMERS[this.value];
+  const preview = document.getElementById('customer-preview');
+  if (cust) {
+    document.getElementById('cp-code').textContent    = cust.code;
+    document.getElementById('cp-name').textContent    = cust.name;
+    document.getElementById('cp-contact').textContent = cust.contact;
+    document.getElementById('cp-factor').textContent  = cust.factor;
+    preview.classList.remove('hidden');
+  } else {
+    preview.classList.add('hidden');
+  }
+});
+
+function updateSchemeName() {
+  const v = document.getElementById('w-catalog').value;
+  document.getElementById('scheme-fields').classList.toggle('hidden', !v);
+}
+
+function renderWizardReview() {
+  const name = document.getElementById('w-name').value;
+  const cust = CUSTOMERS[document.getElementById('w-customer').value] || {};
+  const status = document.getElementById('w-status').value;
+  const start = fmtDate(document.getElementById('w-start').value);
+  const end   = fmtDate(document.getElementById('w-end').value);
+  const catalog = document.getElementById('w-catalog').value;
+  const schemeName = document.getElementById('w-scheme-name')?.value;
+  const cleanVal = v => (v && !v.startsWith('—')) ? v : '—';
+  const wBox    = cleanVal(document.getElementById('w-box')?.value);
+  const wDrawer = cleanVal(document.getElementById('w-drawer')?.value);
+  const wSeries = cleanVal(document.getElementById('w-series')?.value);
+  const wDoor   = cleanVal(document.getElementById('w-door')?.value);
+
+  document.getElementById('wizard-review').innerHTML = `
+    <div class="card" style="margin-bottom:1rem">
+      <div class="card-header"><h3>Project <a class="review-edit-link" onclick="wizardStep=1;renderWizard()">Edit</a></h3></div>
+      <div class="card-body">
+        <div class="info-grid">
+          <div class="info-item"><div class="label">Project Name</div><div class="value">${name}</div></div>
+          <div class="info-item"><div class="label">Status</div><div class="value"><span class="badge ${STATUS_BADGE[status]||'badge-slate'}">${status}</span></div></div>
+          <div class="info-item"><div class="label">Start Date</div><div class="value">${start}</div></div>
+          <div class="info-item"><div class="label">End Date</div><div class="value">${end}</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:1rem">
+      <div class="card-header"><h3>Customer <a class="review-edit-link" onclick="wizardStep=2;renderWizard()">Edit</a></h3></div>
+      <div class="card-body">
+        <div class="info-grid">
+          <div class="info-item"><div class="label">Customer</div><div class="value">${cust.name || '—'}</div></div>
+          <div class="info-item"><div class="label">Customer Code</div><div class="value font-mono">${cust.code || '—'}</div></div>
+        </div>
+      </div>
+    </div>
+    ${catalog ? `<div class="card">
+      <div class="card-header"><h3>Initial Scheme <a class="review-edit-link" onclick="wizardStep=4;renderWizard()">Edit</a></h3></div>
+      <div class="card-body">
+        <div class="info-grid">
+          <div class="info-item"><div class="label">Scheme Name</div><div class="value">${schemeName || '(unnamed)'}</div></div>
+          <div class="info-item"><div class="label">Catalog</div><div class="value"><span class="badge badge-blue font-mono">${catalog}</span></div></div>
+          <div class="info-item"><div class="label">Cabinet Box</div><div class="value">${wBox}</div></div>
+          <div class="info-item"><div class="label">Drawer Options</div><div class="value">${wDrawer}</div></div>
+          <div class="info-item"><div class="label">Series</div><div class="value">${wSeries}</div></div>
+          <div class="info-item"><div class="label">Door Style</div><div class="value">${wDoor}</div></div>
+        </div>
+      </div>
+    </div>` : `<div class="alert alert-info"><span>ℹ</span><span>No scheme selected — you can add one later from the Schemes tab.</span></div>`}
+  `;
+}
+
+function createProject() {
+  const custKey  = document.getElementById('w-customer').value;
+  const cust     = CUSTOMERS[custKey] || {};
+  const catalog  = document.getElementById('w-catalog').value;
+  const schemeName = document.getElementById('w-scheme-name')?.value;
+  // Capture all scheme construction/style fields from Step 4
+  const wBox    = document.getElementById('w-box')?.value || '';
+  const wDrawer = document.getElementById('w-drawer')?.value || '';
+  const wSeries = document.getElementById('w-series')?.value || '';
+  const wDoor   = document.getElementById('w-door')?.value || '';
+  const cleanVal = v => (v && !v.startsWith('—')) ? v : '';
+
+  const newId = 'P' + String(projects.length + 1).padStart(3, '0');
+  const newProject = {
+    id: newId,
+    name:    document.getElementById('w-name').value.trim(),
+    desc:    document.getElementById('w-desc').value.trim(),
+    customer: custKey,
+    status:  document.getElementById('w-status').value,
+    start:   document.getElementById('w-start').value,
+    end:     document.getElementById('w-end').value,
+    billing: document.getElementById('w-billing').value,
+    shipping: document.getElementById('w-shipping').value,
+    schemes: catalog ? [{
+      id:'S'+Date.now(), catalog, name: schemeName || `${catalog} Scheme`,
+      box: cleanVal(wBox), drawer: cleanVal(wDrawer),
+      series: cleanVal(wSeries), finish:'', door: cleanVal(wDoor), dfstyle:''
+    }] : [],
+    layouts: [], units: [], trucks: [],
+  };
+  projects.unshift(newProject);
+  // Reset dirty flag so closeWizard doesn't prompt
+  wizardDirty = false;
+  closeWizard();
+  renderProjectsList(projects);
+  currentTab = 'overview';
+  openProject(newId);
+  showToast(`Project "${newProject.name}" created successfully`);
+}
+
+// ═══════════════════════════════════════════════
+//   ADD SCHEME MODAL
+// ═══════════════════════════════════════════════
+function openAddScheme() { openModal('modal-scheme'); }
+
+function toggleSchemeExtra() {
+  const v = document.getElementById('s-catalog').value;
+  document.getElementById('scheme-extra').classList.toggle('hidden', !v);
+}
+
+function switchSchemeTab(which) {
+  document.getElementById('stab-construction-pane').classList.toggle('hidden', which !== 'construction');
+  document.getElementById('stab-style-pane').classList.toggle('hidden', which !== 'style');
+  const c = document.getElementById('stab-construction');
+  const s = document.getElementById('stab-style');
+  if (which === 'construction') {
+    c.style.cssText = 'flex:1;padding:.55rem;font-size:.82rem;font-weight:600;color:#2563eb;background:#eff6ff;border:none;border-right:1px solid #e2e8f0;cursor:pointer';
+    s.style.cssText = 'flex:1;padding:.55rem;font-size:.82rem;font-weight:500;color:#64748b;background:#fff;border:none;cursor:pointer';
+  } else {
+    s.style.cssText = 'flex:1;padding:.55rem;font-size:.82rem;font-weight:600;color:#2563eb;background:#eff6ff;border:none;cursor:pointer';
+    c.style.cssText = 'flex:1;padding:.55rem;font-size:.82rem;font-weight:500;color:#64748b;background:#fff;border:none;border-right:1px solid #e2e8f0;cursor:pointer';
+  }
+}
+
+function saveScheme() {
+  const catalog = document.getElementById('s-catalog').value;
+  if (!catalog) { alert('Please select a catalog.'); return; }
+  const name = document.getElementById('s-name').value.trim();
+  if (!name) { alert('Scheme name is required.'); return; }
+  currentProject.schemes.push({
+    id: 'S' + Date.now(), catalog, name,
+    box:     document.getElementById('s-box').value,
+    drawer:  document.getElementById('s-drawer').value,
+    series:  document.getElementById('s-series').value,
+    finish:  document.getElementById('s-finish').value,
+    door:    document.getElementById('s-door').value,
+    dfstyle: document.getElementById('s-dfstyle').value,
+  });
+  closeModal('modal-scheme');
+  renderTabs(); renderChecklist(); switchTab('schemes');
+}
+
+function removeScheme(id) {
+  if (!confirm('Remove this scheme?')) return;
+  currentProject.schemes = currentProject.schemes.filter(s => s.id !== id);
+  renderTabs(); renderChecklist(); renderSchemes();
+}
+
+// ═══════════════════════════════════════════════
+//   BULK IMPORT UNITS
+// ═══════════════════════════════════════════════
+function openImportUnits() {
+  document.getElementById('import-csv').value = '';
+  document.getElementById('import-preview').innerHTML = '';
+  document.getElementById('import-count').textContent = '';
+  document.getElementById('btn-do-import').disabled = true;
+  openModal('modal-import-units');
+}
+
+function previewImport() {
+  const p = currentProject;
+  const raw = document.getElementById('import-csv').value.trim();
+  if (!raw) {
+    document.getElementById('import-preview').innerHTML = '';
+    document.getElementById('import-count').textContent = '';
+    document.getElementById('btn-do-import').disabled = true;
+    return;
+  }
+
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  const parsed = []; const errors = [];
+
+  lines.forEach((line, i) => {
+    const cols = line.split(',').map(c => c.trim());
+    if (cols.length < 3) { errors.push(`Row ${i+1}: too few columns`); return; }
+    const [building, floor, unitNum, layoutName, po] = cols;
+    // Try to match layout by name (case-insensitive partial)
+    const layout = p.layouts.find(l => l.name.toLowerCase().includes((layoutName||'').toLowerCase()));
+    parsed.push({ building, floor, number: unitNum, layoutName: layoutName||'', layoutId: layout?.id||null, po: po||'', ok: !!layout || !layoutName });
+  });
+
+  const okCount  = parsed.filter(r => r.ok).length;
+  const errCount = parsed.filter(r => !r.ok).length;
+
+  document.getElementById('import-count').textContent =
+    `${okCount} valid row${okCount!==1?'s':''}${errCount?` · ${errCount} with unmatched layout`:''} — ${lines.length} total`;
+  document.getElementById('btn-do-import').disabled = okCount === 0;
+
+  document.getElementById('import-preview').innerHTML = `
+    <div class="table-wrap" style="max-height:200px;overflow-y:auto">
+      <table>
+        <thead><tr><th>#</th><th>Building</th><th>Floor</th><th>Unit</th><th>Layout</th><th>PO</th><th>Status</th></tr></thead>
+        <tbody>
+          ${parsed.map((r, i) => `<tr style="background:${r.ok?'':'#fff7f7'}">
+            <td class="text-xs text-muted">${i+1}</td>
+            <td>${r.building}</td><td>${r.floor}</td><td><strong>${r.number}</strong></td>
+            <td class="text-sm">${r.layoutId
+              ? `<span style="color:#15803d">✓ ${r.layoutName}</span>`
+              : r.layoutName
+                ? `<span style="color:#dc2626">✗ "${r.layoutName}" not found</span>`
+                : '<span class="text-muted">none</span>'}</td>
+            <td class="td-mono">${r.po||'—'}</td>
+            <td>${r.ok?'<span class="badge badge-green">Ready</span>':'<span class="badge badge-red">Error</span>'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  document._importParsed = parsed;
+}
+
+function executeImport() {
+  const p = currentProject;
+  const parsed = document._importParsed || [];
+  const valid = parsed.filter(r => r.ok);
+  valid.forEach(r => {
+    p.units.push({
+      id: 'U' + Date.now() + Math.random().toString(36).slice(2,5),
+      building: r.building, floor: r.floor, number: r.number,
+      layout: r.layoutId || null, po: r.po, status: 'Pending', truck: null,
+    });
+  });
+  closeModal('modal-import-units');
+  renderTabs(); renderChecklist(); switchTab('units');
+}
+
+// ═══════════════════════════════════════════════
+//   ADD LAYOUT MODAL
+// ═══════════════════════════════════════════════
+function openAddLayout() { openModal('modal-layout'); }
+
+function toggleLayoutSource(v) {
+  document.getElementById('layout-manual-fields').classList.toggle('hidden', v === 'kit');
+  document.getElementById('layout-kit-fields').classList.toggle('hidden', v === 'manual');
+}
+
+function saveLayout() {
+  const name = document.getElementById('l-name').value.trim();
+  if (!name) { alert('Layout name is required.'); return; }
+  const source = document.querySelector('[name="layout-source"]:checked').value;
+  currentProject.layouts.push({
+    id: 'L' + Date.now(), name, source,
+    po:    document.getElementById('l-po')?.value || '',
+    notes: document.getElementById('l-notes')?.value || '',
+  });
+  closeModal('modal-layout');
+  renderTabs(); renderChecklist(); switchTab('layouts');
+}
+
+function removeLayout(id) {
+  if (!confirm('Remove this layout? Units assigned to it will lose their layout reference.')) return;
+  currentProject.layouts = currentProject.layouts.filter(l => l.id !== id);
+  currentProject.units.forEach(u => { if (u.layout === id) u.layout = null; });
+  renderTabs(); renderChecklist(); renderLayouts();
+}
+
+// ═══════════════════════════════════════════════
+//   ADD UNIT MODAL
+// ═══════════════════════════════════════════════
+function openAddUnit() {
+  const p = currentProject;
+  const sel = document.getElementById('u-layout');
+  sel.innerHTML = '<option value="">— Select a layout —</option>' +
+    p.layouts.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+  const warn = document.getElementById('unit-layout-warning');
+  warn.style.display = p.layouts.length === 0 ? 'flex' : 'none';
+  document.getElementById('u-building').value = '';
+  document.getElementById('u-floor').value = '';
+  document.getElementById('u-number').value = '';
+  document.getElementById('u-po').value = '';
+  openModal('modal-unit');
+}
+
+function saveUnit() {
+  const num = document.getElementById('u-number').value.trim();
+  if (!num) { alert('Unit number is required.'); return; }
+  const layout = document.getElementById('u-layout').value;
+  if (!layout) { alert('Please select a layout.'); return; }
+  currentProject.units.push({
+    id: 'U' + Date.now(),
+    building: document.getElementById('u-building').value,
+    floor:    document.getElementById('u-floor').value,
+    number:   num,
+    layout, po: document.getElementById('u-po').value,
+    status: 'Not Loaded', truck: null,
+  });
+  closeModal('modal-unit');
+  renderTabs(); renderChecklist(); switchTab('units');
+}
+
+function removeUnit(id) {
+  if (!confirm('Remove this unit?')) return;
+  currentProject.units = currentProject.units.filter(u => u.id !== id);
+  currentProject.trucks.forEach(t => { t.assignedUnits = t.assignedUnits.filter(uid => uid !== id); });
+  renderTabs(); renderChecklist(); renderUnits();
+}
+
+// ═══════════════════════════════════════════════
+//   ADD TRUCK MODAL
+// ═══════════════════════════════════════════════
+let truckAvail = [], truckAssigned = [];
+
+function openAddTruck() {
+  const p = currentProject;
+  truckAvail    = p.units.filter(u => !u.truck).map(u => u.id);
+  truckAssigned = [];
+  document.getElementById('t-type').value = '';
+  document.getElementById('t-desc').value = '';
+  renderTruckLists();
+  openModal('modal-truck');
+}
+
+function renderTruckLists() {
+  const p = currentProject;
+  const availEl = document.getElementById('truck-available-units');
+  const assEl   = document.getElementById('truck-assigned-units');
+  availEl.innerHTML = truckAvail.length
+    ? truckAvail.map(uid => { const u = p.units.find(x=>x.id===uid); return u ? `<div class="listbox-item" onclick="this.classList.toggle('selected')">${u.building} Fl.${u.floor} · ${u.number}</div>` : ''; }).join('')
+    : '<div style="padding:.6rem;font-size:.8rem;color:#94a3b8">No available units</div>';
+  assEl.innerHTML = truckAssigned.length
+    ? truckAssigned.map(uid => { const u = p.units.find(x=>x.id===uid); return u ? `<div class="listbox-item" onclick="this.classList.toggle('selected')">${u.building} Fl.${u.floor} · ${u.number}</div>` : ''; }).join('')
+    : '<div style="padding:.6rem;font-size:.8rem;color:#94a3b8">None assigned</div>';
+  const pct = Math.min(100, Math.round((truckAssigned.length / 10) * 100));
+  document.getElementById('truck-load-bar').style.width = pct + '%';
+  document.getElementById('truck-load-pct').textContent = pct + '% filled';
+}
+
+function moveUnits(dir, mode) {
+  const availEl = document.getElementById('truck-available-units');
+  const assEl   = document.getElementById('truck-assigned-units');
+  const p       = currentProject;
+
+  if (dir === 'right') {
+    if (mode === 'all') {
+      truckAssigned = [...truckAssigned, ...truckAvail];
+      truckAvail = [];
+    } else {
+      const sel = [...availEl.querySelectorAll('.selected')];
+      const selIds = sel.map(el => {
+        const idx = [...availEl.children].indexOf(el);
+        return truckAvail[idx];
+      });
+      truckAssigned = [...truckAssigned, ...selIds];
+      truckAvail = truckAvail.filter(id => !selIds.includes(id));
+    }
+  } else {
+    if (mode === 'all') {
+      truckAvail = [...truckAvail, ...truckAssigned];
+      truckAssigned = [];
+    } else {
+      const sel = [...assEl.querySelectorAll('.selected')];
+      const selIds = sel.map(el => {
+        const idx = [...assEl.children].indexOf(el);
+        return truckAssigned[idx];
+      });
+      truckAvail = [...truckAvail, ...selIds];
+      truckAssigned = truckAssigned.filter(id => !selIds.includes(id));
+    }
+  }
+  renderTruckLists();
+}
+
+function saveTruck() {
+  const type = document.getElementById('t-type').value;
+  if (!type) { alert('Please select a truck type.'); return; }
+  const deliveryDate = document.getElementById('t-delivery').value;
+  if (!deliveryDate) { alert('Please set a scheduled delivery date.'); return; }
+  const truck = {
+    id: 'T' + Date.now(),
+    type,
+    desc: document.getElementById('t-desc').value || type,
+    assignedUnits: [...truckAssigned],
+    deliveryDate,
+    notes: document.getElementById('t-notes').value || '',
+  };
+  currentProject.trucks.push(truck);
+  truckAssigned.forEach(uid => {
+    const u = currentProject.units.find(x => x.id === uid);
+    if (u) { u.truck = truck.id; u.status = 'Loaded'; }
+  });
+  closeModal('modal-truck');
+  renderTabs(); renderChecklist(); switchTab('trucks');
+}
+
+function removeTruck(id) {
+  if (!confirm('Remove this truck? Units will be marked as not loaded.')) return;
+  const truck = currentProject.trucks.find(t => t.id === id);
+  if (truck) {
+    truck.assignedUnits.forEach(uid => {
+      const u = currentProject.units.find(x => x.id === uid);
+      if (u) { u.truck = null; u.status = 'Not Loaded'; }
+    });
+  }
+  currentProject.trucks = currentProject.trucks.filter(t => t.id !== id);
+  renderTabs(); renderChecklist(); renderTrucks();
+}
+
+// ═══════════════════════════════════════════════
+//   EDIT PROJECT MODAL
+// ═══════════════════════════════════════════════
+function openEditProject() {
+  const p = currentProject;
+  document.getElementById('ep-name').value     = p.name;
+  document.getElementById('ep-desc').value     = p.desc;
+  document.getElementById('ep-customer').value = p.customer;
+  document.getElementById('ep-status').value   = p.status;
+  document.getElementById('ep-start').value    = p.start;
+  document.getElementById('ep-end').value      = p.end;
+  openModal('modal-edit-project');
+}
+
+function saveEditProject() {
+  const p = currentProject;
+  p.name     = document.getElementById('ep-name').value.trim() || p.name;
+  p.desc     = document.getElementById('ep-desc').value.trim();
+  p.customer = document.getElementById('ep-customer').value;
+  p.status   = document.getElementById('ep-status').value;
+  p.start    = document.getElementById('ep-start').value;
+  p.end      = document.getElementById('ep-end').value;
+  closeModal('modal-edit-project');
+  renderProjectDetail();
+}
+
+// ═══════════════════════════════════════════════
+//   GENERATE UNITS WITH COSMO AI
+// ═══════════════════════════════════════════════
+let _generatedUnits = [];
+
+function openGenerateUnits() {
+  _generatedUnits = [];
+  document.getElementById('gen-prompt').value = '';
+  document.getElementById('gen-preview').style.display = 'none';
+  document.getElementById('gen-preview-rows').innerHTML = '';
+  document.getElementById('gen-error').classList.add('hidden');
+  document.getElementById('gen-spinner').style.display = 'none';
+  document.getElementById('btn-add-generated').classList.add('hidden');
+  document.getElementById('btn-add-generated').textContent = 'Add Units to Project';
+  const btn = document.getElementById('btn-do-generate');
+  btn.textContent = '✨ Generate';
+  btn.disabled = false;
+  document.getElementById('gen-footer-space').style.display = '';
+  const saved = localStorage.getItem('cosmo_api_key') || '';
+  document.getElementById('gen-api-key').value = saved;
+  document.getElementById('gen-key-status').textContent = saved
+    ? '✓ API key loaded from local storage'
+    : 'Enter your Anthropic API key to get started';
+  openModal('modal-generate-units');
+}
+
+function saveApiKey() {
+  const key = document.getElementById('gen-api-key').value.trim();
+  if (!key) { alert('Please enter an API key.'); return; }
+  localStorage.setItem('cosmo_api_key', key);
+  document.getElementById('gen-key-status').textContent = '✓ API key saved to local storage';
+}
+
+async function executeGenerate() {
+  const apiKey = document.getElementById('gen-api-key').value.trim();
+  const prompt = document.getElementById('gen-prompt').value.trim();
+  const errEl  = document.getElementById('gen-error');
+  errEl.classList.add('hidden');
+
+  if (!apiKey) {
+    errEl.textContent = 'Please enter your Anthropic API key above.';
+    errEl.classList.remove('hidden'); return;
+  }
+  if (!apiKey.startsWith('sk-ant-')) {
+    errEl.textContent = "That doesn't look like a valid Anthropic API key (should start with sk-ant-).";
+    errEl.classList.remove('hidden'); return;
+  }
+  if (!prompt) {
+    errEl.textContent = 'Please describe the units you want to generate.';
+    errEl.classList.remove('hidden'); return;
+  }
+
+  const p = currentProject;
+  const layouts = p.layouts.map(l => l.name);
+  if (layouts.length === 0) {
+    errEl.textContent = 'This project has no layouts yet. Add at least one layout before generating units.';
+    errEl.classList.remove('hidden'); return;
+  }
+
+  document.getElementById('gen-spinner').style.display = 'flex';
+  document.getElementById('gen-footer-space').style.display = 'none';
+  document.getElementById('btn-do-generate').disabled = true;
+  document.getElementById('gen-preview').style.display = 'none';
+  document.getElementById('btn-add-generated').classList.add('hidden');
+
+  const systemPrompt = `You are a data-entry assistant for Cosmos Cabinets, a cabinet order management system.
+You generate unit lists for construction projects (apartment buildings, condos, developments).
+A "unit" is an individual apartment, room, or space that will receive cabinet installations.
+
+Available layouts for this project: ${layouts.map(n => `"${n}"`).join(', ')}
+
+Respond with ONLY a valid JSON array — no markdown, no explanation, just the raw JSON.
+Each element must have exactly these keys:
+- building: string (e.g. "Building A", "Tower 1")
+- floor: string (e.g. "1", "2", "3")
+- number: string (unique unit identifier per building+floor, e.g. "101", "K-01", "G-01")
+- layout: string (must exactly match one of the available layouts above — pick the best match)
+- po: string (PO number, e.g. "PO-2026-001" — generate unique ones per building or as requested)
+
+Rules:
+- Every layout value must exactly match one of the available layouts
+- Unit numbers must be unique within their building+floor combination
+- Return ONLY the JSON array`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error?.message || `API error ${response.status}`);
+    }
+
+    const data = await response.json();
+    const text = (data.content?.[0]?.text || '').trim()
+      .replace(/^```json?\s*/i, '').replace(/\s*```$/i, '').trim();
+
+    let parsed;
+    try { parsed = JSON.parse(text); }
+    catch { throw new Error('Cosmo returned an unexpected response format. Try rephrasing your request.'); }
+
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      throw new Error('No units were generated. Try being more specific.');
+    }
+
+    _generatedUnits = parsed.map((u, i) => ({
+      id: 'GEN_' + i,
+      building: String(u.building || 'Building A'),
+      floor:    String(u.floor || '1'),
+      number:   String(u.number || (i + 1)),
+      layout:   layouts.includes(u.layout) ? u.layout : layouts[0],
+      po:       String(u.po || ''),
+      status:   'Not Loaded',
+      truck:    null,
+    }));
+
+    const rows = document.getElementById('gen-preview-rows');
+    rows.innerHTML = _generatedUnits.map(u => {
+      const matched = layouts.includes(u.layout);
+      return `<tr>
+        <td>${u.building}</td>
+        <td>${u.floor}</td>
+        <td>${u.number}</td>
+        <td style="${matched ? '' : 'color:#ef4444;font-weight:600'}">${u.layout}</td>
+        <td class="text-muted">${u.po || '—'}</td>
+      </tr>`;
+    }).join('');
+
+    document.getElementById('gen-preview-label').textContent =
+      `${_generatedUnits.length} unit${_generatedUnits.length !== 1 ? 's' : ''} ready to review — scroll to confirm, then click Add`;
+    document.getElementById('gen-preview').style.display = 'block';
+
+    const addBtn = document.getElementById('btn-add-generated');
+    addBtn.textContent = `Add ${_generatedUnits.length} Unit${_generatedUnits.length !== 1 ? 's' : ''} to Project`;
+    addBtn.classList.remove('hidden');
+
+    document.getElementById('btn-do-generate').textContent = '↺ Regenerate';
+
+  } catch (err) {
+    errEl.textContent = err.message || 'Something went wrong. Please try again.';
+    errEl.classList.remove('hidden');
+  } finally {
+    document.getElementById('gen-spinner').style.display = 'none';
+    document.getElementById('gen-footer-space').style.display = '';
+    document.getElementById('btn-do-generate').disabled = false;
+  }
+}
+
+function addGeneratedUnits() {
+  if (!_generatedUnits.length) return;
+  const p = currentProject;
+  _generatedUnits.forEach(u => {
+    p.units.push({ ...u, id: 'U' + Date.now() + '_' + Math.random().toString(36).slice(2, 5) });
+  });
+  closeModal('modal-generate-units');
+  renderTabs(); renderChecklist(); switchTab('units');
+}
+
+// ═══════════════════════════════════════════════
+//   MODAL HELPERS
+// ═══════════════════════════════════════════════
+function openModal(id)  { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+// Close modal on backdrop click
+document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+  backdrop.addEventListener('click', e => {
+    if (e.target !== backdrop) return;
+    // Wizard modal needs the confirmation check
+    if (backdrop.id === 'wizard-modal') { closeWizard(); return; }
+    backdrop.classList.add('hidden');
+  });
+});
+
+// Close topmost modal on Escape key
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  // Check wizard first (has confirmation logic)
+  const wizard = document.getElementById('wizard-modal');
+  if (!wizard.classList.contains('hidden')) { closeWizard(); return; }
+  // Close the last visible modal-backdrop
+  const backdrops = document.querySelectorAll('.modal-backdrop:not(.hidden)');
+  if (backdrops.length) backdrops[backdrops.length - 1].classList.add('hidden');
+});
+
+// ═══════════════════════════════════════════════
+//   UTILS
+// ═══════════════════════════════════════════════
+function fmtDate(iso) {
+  if (!iso) return '—';
+  try {
+    const [y,m,d] = iso.split('-');
+    return `${m}/${d}/${y}`;
+  } catch { return iso; }
+}
+
+// ═══════════════════════════════════════════════
+//   INIT
+// ═══════════════════════════════════════════════
+renderProjectsList(projects);
+switchTab('overview'); // ensure pane state
+
+// Active nav highlight
+document.querySelectorAll('.topnav nav a').forEach(a => {
+  a.addEventListener('click', function() {
+    document.querySelectorAll('.topnav nav a').forEach(x => x.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>
